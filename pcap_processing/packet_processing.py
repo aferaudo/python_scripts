@@ -157,7 +157,7 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
     # TODO Add new interesting protocols
 
     
-    output_file_name = mac_address + "_rate_by_protocol.log"
+    output_file_name = mac_address + "_rate_by_protocol_" + str(window) + ".log"
     
     # Layers refer to TCP/IP stack (layer1: Host-to-network, layer2: Internet(Network), layer3: Transport, layer4: Application)
     protocols_packet_counter_layer_1 = Counter()

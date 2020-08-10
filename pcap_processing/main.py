@@ -29,7 +29,7 @@ def main(argv):
 
     
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="PCAP processer: It requires that all pcaps file are in a path which contains the mac address of the devices to consider (e.g. mac_address/subfolder/file.pcap or mac_address/file.pcap")
+    parser = argparse.ArgumentParser(description="PCAP processer: It requires that all pcaps file are in a path which contains the mac address of the device to analyse (e.g. mac_address/subfolder/file.pcap or mac_address/file.pcap")
 
     # TODO change pcap with folder name
     parser.add_argument('-f', '--folder', metavar='<folder>',
