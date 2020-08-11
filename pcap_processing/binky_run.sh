@@ -7,7 +7,7 @@
 # Path in binky
 # "/local/scratch/rmm1002/imperial-data/sigcomm/pcaps"
 
-INTIAL_PATH="/Users/angeloferaudo/Desktop/Research activities/Internship July-September/IoT Data/data"
+INTIAL_PATH=""
 
 # Test
 # source /Users/angeloferaudo/Desktop/Research\ activities/Internship\ July-September/IoT\ Data/data_analysis_script/venv/bin/activate
