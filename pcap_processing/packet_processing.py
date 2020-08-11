@@ -1,9 +1,5 @@
 import datetime
 import os
-import pandas as pd
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from enum import Enum
 from collections import Counter
 from scapy.utils import RawPcapReader
@@ -49,11 +45,33 @@ def direction_view(direction):
 
 
 # Utility method
-def file_log_counter_writing(opened_file, counter_dict, separator=""):
+def logs_writing_in_two_files(file_1, file_2, window=-1):
+    if window != -1:
+        file_1.write("-------------------:Window::{}:-------------------\n".format(window))
+        file_2.write("-------------------:Window::{}:-------------------\n".format(window))
+    else:
+        file_1.write("-------------------:NEW-PcapFile:-------------------\n")
+        file_2.write("-------------------:NEW-PcapFile:-------------------\n")
 
+# Utility method
+def file_log_counter_writing(opened_file, counter_dict, window=-1):
+    total = 0
+    for key in counter_dict.keys():
+        if key == PktDirection.incoming:
+            opened_file.write('Incoming:{}\n'.format(counter_dict[key]))
+        else:
+            opened_file.write('Outgoing:{}\n'.format(counter_dict[key]))
+        
+        total += counter_dict[key]
+    
+    opened_file.write("Total:{}\n\n".format(total))
+
+
+# Utility method
+def file_log_counter_writing_protocol(opened_file, counter_dict, separator="", window=-1):
     for (proto, direction) in counter_dict.keys():
         pkts = counter_dict.get((proto,direction))
-        opened_file.write("{}{}Protocol: {}...{}\n".format(separator, direction_view(direction), proto, pkts))
+        opened_file.write("{}{}:Protocol:::{}...{}\n".format(separator, direction_view(direction), proto, pkts))
 
 
 # Utility method
@@ -64,10 +82,11 @@ def mac_address_fixer(mac_address):
         mac_address: mac address to be fixed
     """
     new_mac = ''
-    if '0' == mac_address.split(':')[0]:
-       new_mac = '0'
-    new_mac += mac_address.replace (':0:',':00:')
-    return new_mac
+    for value in mac_address.split(':'):
+        new_mac += ('0' + value) if len(value) == 1 else value
+        new_mac += ':'
+    
+    return new_mac[:-1]
 
 
 # Utility method
@@ -98,54 +117,67 @@ def print_timestamp_first_last(file_name):
 
 
 
-def destination_contacted(file_name, src_address, plotting=False):
+# Utility method
+def computing_timestamp(pkt_metadata):
+    timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
+    return (timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
+
+
+
+def destinations_contacted(folder, src_address):
     """
     This method provides an overview about the destinations contacted by a devices with a specific ip address. 
     Particularly, the methods return the number of packets send to all the destions
     Args:
-        file_name: pcap file
+        folder: folder containing pcap files
         src_address: ip address to analalyse
         plotting: plot the result obtained
     """
     counter = Counter()
-    for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
-        
-        # Obtaining ether packet 
-        ether_pkt = Ether(pkt_data)
-        
-        if 'type' not in ether_pkt.fields:
-            # LLC frames will have 'len' instead of 'type'.
-            # We disregard those
-            continue
-        
-        if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
-            continue
-        
-        ip_pkt = ether_pkt[IP]
-        
-        if ip_pkt.src != src_address:
-            continue
+    output_file_name = "destination_contacted" + src_address + ".log"
 
-        counter[ip_pkt.dst] += 1
+    out_file = open(output_file_name,'w')
+
+    # Ordering Files in the directory (useful for window purposes)
+    files = sorted(os.listdir(folder))
+
+    for filename in files:
+        
+        if not filename.endswith(".pcap"):
+            print("Not processed {} ...".format(filename))
+            continue
+            
+        file_name = folder + filename
+        print("Processing {} ...".format(file_name))
+        for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
+            
+            # Obtaining ether packet 
+            ether_pkt = Ether(pkt_data)
+            
+            if 'type' not in ether_pkt.fields:
+                # LLC frames will have 'len' instead of 'type'.
+                # We disregard those
+                continue
+            
+            if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
+                continue
+            
+            ip_pkt = ether_pkt[IP]
+            
+            if ip_pkt.src != src_address:
+                continue
+
+            counter[ip_pkt.dst] += 1
     
-    if plotting:
-        fig, ax = plt.subplots(figsize = (7, 4)) 
-        ax.set_title('Contacted destinations by {}'.format(src_address))
-        plt.ylabel('# Packets')
-        plt.xlabel('Destination Address')
-        values = sorted(list(counter.values()), reverse=True)
-        
-        plt.bar(counter.keys(), values)
-        for index, value in enumerate(values):
-            plt.text(index, value, str(value), size=12, ha='center')
-        plt.show()
-        
-    else:
-        print("Destination contacted by {}: {}".format(src_addresscounter))
+    out_file.write("Destinations contacted by {}: \n".format(src_address))
+    for key in counter.keys():
+        out_file.write("{}::{}\n".format(key, counter[key]))
+    
+    out_file.close()
     
 
-
-def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
+# Avoid to process the same pcap file multiple times
+def packet_rate_final(folder, mac_address, window=None):
     """
     The method produces an output file containing the packet rates organised in layers (e.g. IPv4...1000)
     Args:
@@ -156,14 +188,17 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
     # TODO Add diurnal and nocturnal window
     # TODO Add new interesting protocols
 
-    
-    output_file_name = mac_address + "_rate_by_protocol_" + str(window) + ".log"
-    
+    last_folder = folder.split("/")[-2]
+
+    output_file_name = mac_address + "_rate_by_protocol_" +  last_folder + "_" + str(window) + ".log"
+    output_file_name_general = mac_address + "_rate_" + last_folder+ "_" + str(window) + ".log"
+
     # Layers refer to TCP/IP stack (layer1: Host-to-network, layer2: Internet(Network), layer3: Transport, layer4: Application)
     protocols_packet_counter_layer_1 = Counter()
     protocols_packet_counter_layer_2 = Counter()
     protocols_packet_counter_layer_3 = Counter()
-    
+    general_packet_counter = Counter()
+
     general_counter = 0 # Timestamp guideline
     window_counter = 0 # Useful for logging purposes
 
@@ -178,11 +213,12 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
 
     # Open log file
     log_file = open(output_file_name,'w')
-    
+    log_file_general = open(output_file_name_general,'w')
+
     # Ordering Files in the directory (useful for window purposes)
     files = sorted(os.listdir(folder))
     total_files = len(files)
-    
+
     # terminal log
     file_log = 0
 
@@ -208,37 +244,35 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
                 # Computing timestamp
                 if general_counter == 1: # This is useful only for the first packet (Is there a clever way?)
                     # Computing first_timestamp
-                    first_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                    first_timestamp = (first_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
+                    first_timestamp = computing_timestamp(pkt_metadata)
                 
-                last_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                last_timestamp = (last_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
+                last_timestamp = computing_timestamp(pkt_metadata)
+                
                 relative_timestamp = last_timestamp - first_timestamp
                 
 
                 if relative_timestamp >= window:
-                    
-                    log_file.write("-------------------:Window::{}:-------------------\n".format(window_counter))
-                    
+                    # Useful logs writing
+                    logs_writing_in_two_files(log_file, log_file_general, window=window_counter)
+
                     # Counters writing
-                    file_log_counter_writing(log_file, protocols_packet_counter_layer_1)
-                    file_log_counter_writing(log_file, protocols_packet_counter_layer_2)
-                    file_log_counter_writing(log_file, protocols_packet_counter_layer_3, separator="\t")
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
+                    file_log_counter_writing(log_file_general, general_packet_counter, window=window_counter)
 
                     window_counter += 1
-                    
-                    
-                    # debug += sum(list(protocols_packet_counter_layer_2.values()))
                     
                     # Reset counters
                     protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
                     protocols_packet_counter_layer_2.clear()
                     protocols_packet_counter_layer_3.clear()
+                    general_packet_counter.clear()
+
                     general_counter = 1
 
                     # Computing another time the first_timestamp
-                    first_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                    first_timestamp = (first_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
+                    first_timestamp = computing_timestamp(pkt_metadata)
 
                     # Reset relative_timestamp
                     relative_timestamp = 0
@@ -247,9 +281,10 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
             ether_pkt = Ether(pkt_data)
             
             direction = PktDirection.not_defined
+            
             if 'type' not in ether_pkt.fields:
                 # LLC frames will have 'len' instead of 'type'.
-                # We disregard those
+                # We do not consider them in this analysis
                 protocols_packet_counter_layer_1[('UNDEFINED-L1', direction)] += 1
                 continue
             
@@ -263,7 +298,10 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
                 direction = PktDirection.outgoing
             else:
                 direction = PktDirection.incoming
-
+            
+            # Counting all the input and output packets 
+            general_packet_counter[direction] += 1
+            
             # In this method only IP packets are considered (interesting for our purposes)
             if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
                 
@@ -294,160 +332,40 @@ def packet_rate_filtering_by_protocol(folder, mac_address, window=None):
             else:
                 protocols_packet_counter_layer_3 ['UNDEFINED-L3'] += 1
 
-       
+        
         if window is None:
-            # In such a case the log file is going to be organised per pcap file instead of window 
-            # Write that the pcap file is changed (should we reset the counter in this case?)
-            log_file.write("-------------------:START-PcapFile::{}:-------------------\n".format(filename))
-            
-            # Counters writing
-            file_log_counter_writing(log_file, protocols_packet_counter_layer_1)
-            file_log_counter_writing(log_file, protocols_packet_counter_layer_2)
-            file_log_counter_writing(log_file, protocols_packet_counter_layer_3, separator="\t")
 
+            # Useful logs writing
+            logs_writing_in_two_files(log_file, log_file_general)
+
+            # Counters writing
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1)
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2)
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+            file_log_counter_writing(log_file_general, general_packet_counter)
+
+            # Reset Counter
             protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
             protocols_packet_counter_layer_2.clear()
             protocols_packet_counter_layer_3.clear()
+            general_packet_counter.clear()
         
-        else:
-            # Write that the pcap file is changed (should we reset the counter in this case?)
-            log_file.write("-------------------:END-PcapFile::{}:-------------------\n".format(filename))
 
-        print("{}/{} analysed...".format(file_log, total_files))
+        print("{}: {}/{} files analysed...".format(mac_address, file_log, total_files))
         
-    if not  window is None:
-        # In this case we have write the packets counted but still not written
-        log_file.write("-------------------:Window::{}:-------------------\n".format(window_counter))
-        
+    if not window is None:
+        # In this case we have to write the packets counted but still not written
+
+        # Useful logs writing
+        logs_writing_in_two_files(log_file, log_file_general, window=window_counter)
+
         # Counters writing
-        file_log_counter_writing(log_file, protocols_packet_counter_layer_1)
-        file_log_counter_writing(log_file, protocols_packet_counter_layer_2)
-        file_log_counter_writing(log_file, protocols_packet_counter_layer_3, separator="\t")
-        
-    
-    # debug += sum(list(protocols_packet_counter_layer_1.values()))
-    # print(debug)
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
+        file_log_counter_writing(log_file_general, general_packet_counter, window=window_counter)
+
+
     log_file.close()
+    log_file_general.close()
     print("done.")
-        
-
-
-# This method works only with a timewindow set
-def packet_rate(folder, mac_address, incoming=False, window=1, plotting=False):
-    """
-        This method computes the packet rate in output and in input to a particular device (same mac address)
-        Args:
-            folder: folder containing pcap files
-            mac_address: mac address of the device
-            incoming: Allows to consider incoming packet as well
-            window: compute the packet rate for a particular time window (in sec) (default value 1, which means amount of packet per second)
-            plotting: print and plot the results (otherwise print)
-    """
-    
-    output_file_name = mac_address + "_rate.log"
-    # Open log file
-    log_file = open(output_file_name,'w')
-
-    # Ordering Files in the directory (useful for window purposes)
-    files = sorted(os.listdir(folder))
-    total_files = len(files)
-
-    # Log on terminal
-    file_log = 0
-
-    # List containing how many packets have been sent in a time window
-    interesting_packets = []
-    relative_timestamp = 0
-    total_counter = 0
-    counter = 0
-    counter_per_file = Counter()
-
-    for filename in files:
-        
-        file_log += 1
-
-        if not filename.endswith(".pcap"):
-            print("Not processed {} ...".format(filename))
-            continue
-        
-        file_name = folder + filename
-        print("Processing {} ...".format(file_name))
-
-
-        for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
-            # Obtaining ether packet (Is it useful in such a case?)
-            ether_pkt = Ether(pkt_data)
-            
-            # If incoming is enabled, only incoming packets (with dst address equal to our address) are considered
-            if ether_pkt.src != mac_address and not incoming:
-                continue
-            elif ether_pkt.dst != mac_address and incoming:
-                continue
-
-            total_counter += 1
-            counter_per_file[filename] += 1
-
-            if relative_timestamp >= window:
-                interesting_packets.append(counter)
-                
-                # Reset counter
-                counter = 1 # Otherwise the packet is going to be lost
-
-                # So we need to recompute the timestamp of our first packet
-                first_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                first_timestamp = (first_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
-                relative_timestamp = 0
-            else:
-                counter += 1
-                if counter == 1: # This condition is valid ONLY ONCE in the entire analysis (first packet)
-                    # Computing the first timestamp so that we can respect the window 
-                    # PAY ATTENTION: Depending on how the packets have been gathered, the timestamp computation may be different
-                    # In this case we have RawPcapReader object so pkt_metadata has sec and usec in two different fields
-                    first_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                    first_timestamp = (first_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
-
-                last_timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-                last_timestamp = (last_timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
-                relative_timestamp = last_timestamp - first_timestamp
-            
-            # Following line is for debugging purposes only
-            # print("First time stamp: {}, last_timestamp:{}, relative_timestamp:{}".format(first_timestamp, last_timestamp, relative_timestamp))
-        
-        print("{}/{} analysed...".format(file_log, total_files))
-    
-    # Checking last packets
-    if counter != 0:
-        interesting_packets.append(counter)
-    # print(interesting_packets)
-    log_file.write("---------------------Packet rate ({}) in a window of {} secs---------------------\n".format(mac_address, window))
-    log_file.write("the list showed contains the amount of packets send or received({}) each {} by {}\n".format(incoming, window, mac_address))
-    log_file.write(str(interesting_packets)+"\n")
-    log_file.write("Total packets {} (incoming {})\n".format(total_counter, incoming,))
-    log_file.write("Total packets per file {} (incoming {})\n".format(str(counter_per_file), incoming,))
-
-    
-    if plotting:
-        fig, ax = plt.subplots(figsize = (7, 4)) 
-        ax.set_title('Packet rate ({}) in a window of {} secs'.format(mac_address, window))
-        plt.ylabel('# Packets')
-        plt.xlabel('Time')
-        values = list(range(0, len(interesting_packets)))
-        
-        plt.plot(values, interesting_packets)
-        plt.show()
-
-    log_file.close()
-
-# print("Calling the method..")
-# file_name = "/Users/angeloferaudo/Desktop/Research activities/Internship July-September/IoT Data/0:26:29:0:77:ce/unctrl/2019-08-08_11.01.14_192.168.20.165.pcap"
-# file_name_2 = "/Users/angeloferaudo/Desktop/Research activities/Internship July-September/IoT Data/0:26:29:0:77:ce/unctrl/2019-08-09_11.01.34_192.168.20.165.pcap"
-# # # packet_rate(file_name, mac_address="00:26:29:00:77:ce", incoming=False, window=180, plotting=True)
-# # # destination_contacted(file_name,'192.168.20.254', plotting=True)
-# # packet_rate_filtering_by_protocol(file_name, mac_address="00:26:29:00:77:ce", window=180)
-
-# print(file_name)
-# print_timestamp_first_last(file_name)
-
-
-# print(file_name_2)
-# print_timestamp_first_last(file_name_2)

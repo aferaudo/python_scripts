@@ -17,15 +17,23 @@ def main(argv):
     # This problem is related to our folder
     myre = re.compile(r'(?:[0-9a-fA-F]:?){6,12}')
     mac_address = re.findall(myre, args.folder)
-    mac_address = packet_processing.mac_address_fixer(mac_address[0])
+   
+    # Verify path validity
+    if not mac_address:
+        print("Path {} not valid!".format(args.folder), file=sys.stderr)
+        sys.exit(-1)
     
-    if args.packet_rate:
-        if args.window is None:
-            packet_processing.packet_rate(args.folder, mac_address, False)
-        else:
-            packet_processing.packet_rate(args.folder, mac_address, False, window=args.window, plotting=True)
-    if args.packet_rate_protocol:
-        packet_processing.packet_rate_filtering_by_protocol(args.folder, mac_address, args.window)
+    mac_address = packet_processing.mac_address_fixer(mac_address[0])
+
+    if args.packet_rate_final:
+        packet_processing.packet_rate_final(args.folder, mac_address, args.window)
+
+    if args.destinations_contacted:
+        if args.src_address is None:
+            print('you must specify the source ip address', file=sys.stderr)
+            sys.exit(-1)
+        
+        packet_processing.destinations_contacted(args.folder, args.src_address)
 
     
 if __name__ == '__main__':
@@ -34,14 +42,14 @@ if __name__ == '__main__':
     # TODO change pcap with folder name
     parser.add_argument('-f', '--folder', metavar='<folder>',
                         help='folder containing pcap file to parse', type=str, required=True)
-    parser.add_argument('--packet_rate', action='store_true',
-                        help='packet rate considering all packets')
-    parser.add_argument('--packet_rate_protocol', action='store_true',
+    parser.add_argument('--packet_rate_final', action='store_true',
                         help='packet rate considering all packets divided by protocol')
     parser.add_argument('--window','-w', type=int,
                         help='window size in secs')
-    
-    
+    parser.add_argument('--destinations_contacted', action='store_true',
+                        help='destinations contacted by a src address')
+    parser.add_argument('--src_address', type=str,
+                        help='src ip address')
     args = parser.parse_args()
     
     
