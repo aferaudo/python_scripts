@@ -7,12 +7,12 @@
 # Path in binky
 # "/local/scratch/rmm1002/imperial-data/sigcomm/pcaps"
 
-INTIAL_PATH=""
+INITIAL_PATH=$1
 
 # Test
 # source /Users/angeloferaudo/Desktop/Research\ activities/Internship\ July-September/IoT\ Data/data_analysis_script/venv/bin/activate
 
-for FOLDER_L1 in "$INTIAL_PATH"/*;do
+for FOLDER_L1 in "$INITIAL_PATH"/*;do
     # First layer mac address folders
     for FOLDER_L2 in "$FOLDER_L1"/*;do
         # Second layer unctrl, ctrl#
