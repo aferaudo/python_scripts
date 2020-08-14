@@ -45,13 +45,13 @@ def direction_view(direction):
 
 
 # Utility method
-def logs_writing_in_two_files(file_1, file_2, window=-1):
+def logs_data_writing(file_1, window=-1):
     if window != -1:
         file_1.write("-------------------:Window::{}:-------------------\n".format(window))
-        file_2.write("-------------------:Window::{}:-------------------\n".format(window))
+        # file_2.write("-------------------:Window::{}:-------------------\n".format(window))
     else:
         file_1.write("-------------------:NEW-PcapFile:-------------------\n")
-        file_2.write("-------------------:NEW-PcapFile:-------------------\n")
+        # file_2.write("-------------------:NEW-PcapFile:-------------------\n")
 
 # Utility method
 def file_log_counter_writing(opened_file, counter_dict, window=-1):
@@ -213,7 +213,7 @@ def packet_rate_final(folder, mac_address, window=None):
 
     # Open log file
     log_file = open(output_file_name,'w')
-    log_file_general = open(output_file_name_general,'w')
+    # log_file_general = open(output_file_name_general,'w')
 
     # Ordering Files in the directory (useful for window purposes)
     files = sorted(os.listdir(folder))
@@ -253,13 +253,13 @@ def packet_rate_final(folder, mac_address, window=None):
 
                 if relative_timestamp >= window:
                     # Useful logs writing
-                    logs_writing_in_two_files(log_file, log_file_general, window=window_counter)
+                    logs_data_writing(log_file, window=window_counter)
 
                     # Counters writing
                     file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
                     file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
                     file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-                    file_log_counter_writing(log_file_general, general_packet_counter, window=window_counter)
+                    file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
 
                     window_counter += 1
                     
@@ -336,13 +336,13 @@ def packet_rate_final(folder, mac_address, window=None):
         if window is None:
 
             # Useful logs writing
-            logs_writing_in_two_files(log_file, log_file_general)
+            logs_data_writing(log_file)
 
             # Counters writing
             file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1)
             file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2)
             file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
-            file_log_counter_writing(log_file_general, general_packet_counter)
+            file_log_counter_writing(log_file, general_packet_counter)
 
             # Reset Counter
             protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
@@ -357,15 +357,15 @@ def packet_rate_final(folder, mac_address, window=None):
         # In this case we have to write the packets counted but still not written
 
         # Useful logs writing
-        logs_writing_in_two_files(log_file, log_file_general, window=window_counter)
+        logs_data_writing(log_file, window=window_counter)
 
         # Counters writing
         file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
         file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
         file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-        file_log_counter_writing(log_file_general, general_packet_counter, window=window_counter)
+        file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
 
 
     log_file.close()
-    log_file_general.close()
+    # log_file_general.close()
     print("done.")

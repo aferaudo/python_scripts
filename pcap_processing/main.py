@@ -26,6 +26,7 @@ def main(argv):
     mac_address = packet_processing.mac_address_fixer(mac_address[0])
 
     if args.packet_rate_final:
+        print("Window size: {}".format(args.window))
         packet_processing.packet_rate_final(args.folder, mac_address, args.window)
 
     if args.destinations_contacted:
