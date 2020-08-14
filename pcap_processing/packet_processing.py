@@ -190,8 +190,18 @@ def packet_rate_final(folder, mac_address, window=None):
 
     last_folder = folder.split("/")[-2]
 
-    output_file_name = mac_address + "_rate_by_protocol_" +  last_folder + "_" + str(window) + ".log"
-    output_file_name_general = mac_address + "_rate_" + last_folder+ "_" + str(window) + ".log"
+    # Loggging organization
+    path = "./processing_results/"
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    path += mac_address + "/"
+    if not os.path.isdir(path):
+        # It is possible that the directory was created in other calls of the method
+        os.mkdir(path)
+    #################################
+
+    output_file_name = path + mac_address + "_rate_by_protocol_" +  last_folder + "_" + str(window) + ".log"
+    # output_file_name_general = mac_address + "_rate_" + last_folder+ "_" + str(window) + ".log"
 
     # Layers refer to TCP/IP stack (layer1: Host-to-network, layer2: Internet(Network), layer3: Transport, layer4: Application)
     protocols_packet_counter_layer_1 = Counter()

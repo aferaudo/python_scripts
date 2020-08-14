@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This implementation run thep packet processer in the binky machine
+# This implementation runs the a packet processing script in the binky machine
 
 # <path>/mac_address/unctrl/*.pcap
 
@@ -19,12 +19,12 @@ for FOLDER_L1 in "$INITIAL_PATH"/*;do
         for i in 1 60 300;do
             # timestamp=`date "+%Y%m%d-%H%M%S"`
             start_time=`date +%s`
-            python main.py --folder "$FOLDER_L2"/ --packet_rate_final -w $i >> test.log
+            python main.py --folder "$FOLDER_L2"/ --packet_rate_final -w $i >> processing.log
             end_time=`date +%s`
-            echo "execution time `expr $end_time - $start_time` s." >> test.log
+            echo "execution time `expr $end_time - $start_time` s." >> processing.log
         done
     done
 done
 
 # Test
-# deactivate
+# deactivate
