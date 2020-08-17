@@ -320,7 +320,7 @@ def packet_rate_final(folder, mac_address, window=None):
                     protocols_packet_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += 1
                 else:
                     print("Unrecognized type l2: {}".format(ether_pkt.type))
-                    protocols_packet_counter_layer_2[('UNDEFINED-L2', direction)] += 1
+                    protocols_packet_counter_layer_2[(str(ether_pkt.type), direction)] += 1
                 continue
             
             # Even if is an IPv4 packet it can be a halved packet
@@ -348,7 +348,7 @@ def packet_rate_final(folder, mac_address, window=None):
             
             else:
                 print("Unrecognized L-3: {}".format(ip_pkt.proto))
-                protocols_packet_counter_layer_3 [('UNDEFINED-L3', direction)] += 1
+                protocols_packet_counter_layer_3 [(str(ip_pkt.proto), direction)] += 1
 
         
         if window is None:
