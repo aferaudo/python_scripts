@@ -314,6 +314,7 @@ def packet_rate_final(folder, mac_address, window=None):
             
             # In this method only IP packets are considered (interesting for our purposes)
             if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
+
                 # It is possible that the type value is not our mapping
                 if ether_pkt.type in protocols_code_l2:
                     protocols_packet_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += 1
@@ -322,6 +323,9 @@ def packet_rate_final(folder, mac_address, window=None):
                     protocols_packet_counter_layer_2[('UNDEFINED-L2', direction)] += 1
                 continue
             
+            # Even if is an IPv4 packet it can be a halved packet
+            if not ether_pkt.haslayer(IP):
+                continue
             protocols_packet_counter_layer_2[('IPv4',direction)] += 1
             
             ip_pkt = ether_pkt[IP]
