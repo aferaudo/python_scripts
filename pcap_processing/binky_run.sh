@@ -19,7 +19,7 @@ for FOLDER_L1 in "$INITIAL_PATH"/*;do
         for i in 1 60 300;do
             # timestamp=`date "+%Y%m%d-%H%M%S"`
             start_time=`date +%s`
-            python main.py --folder "$FOLDER_L2"/ --packet_rate_final -w $i >> processing.log
+            python3 main.py --folder "$FOLDER_L2"/ --packet_rate_final -w $i >> processing.log
             end_time=`date +%s`
             echo "execution time `expr $end_time - $start_time` s." >> processing.log
         done
