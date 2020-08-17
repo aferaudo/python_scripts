@@ -24,14 +24,24 @@ def main(argv):
         sys.exit(-1)
     
     mac_address = packet_processing.mac_address_fixer(mac_address[0])
+    
+    # Test already started, so skip some of the devices already anlaysed (binky dependent)
+    file_filter = open('filtering_devices', 'r')
+    not_valid_devices =  file_filter.read().split(';')
+    file_filter.close()
 
+    if mac_address in not_valid_devices:
+        print("Device {} already analysed skip...".format(mac_address))
+        sys.exit(0)
+    
+    
     if args.packet_rate_final:
         print("Window size: {}".format(args.window))
         packet_processing.packet_rate_final(args.folder, mac_address, args.window)
 
     if args.destinations_contacted:
         if args.src_address is None:
-            print('you must specify the source ip address', file=sys.stderr)
+            print('You must specify the source ip address', file=sys.stderr)
             sys.exit(-1)
         
         packet_processing.destinations_contacted(args.folder, args.src_address)

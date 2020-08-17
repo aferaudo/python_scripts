@@ -19,11 +19,13 @@ protocol_mapping_l2 = {
     'ARP': 0x0806,
     'IPv4': 0x0800,
     'IEEE 802.1X': 0x0888E,
+    'IPv6': 0x086DD
 }
 
 # To add other protocol numbers (layer 3), look at this link: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 protocol_mapping_l3 = {
     'ICMP': 1,
+    'IGMP': 2,
     'TCP': 6,
     'UDP': 17,
     'IPv6': 41,
@@ -48,10 +50,8 @@ def direction_view(direction):
 def logs_data_writing(file_1, window=-1):
     if window != -1:
         file_1.write("-------------------:Window::{}:-------------------\n".format(window))
-        # file_2.write("-------------------:Window::{}:-------------------\n".format(window))
     else:
         file_1.write("-------------------:NEW-PcapFile:-------------------\n")
-        # file_2.write("-------------------:NEW-PcapFile:-------------------\n")
 
 # Utility method
 def file_log_counter_writing(opened_file, counter_dict, window=-1):
@@ -314,7 +314,6 @@ def packet_rate_final(folder, mac_address, window=None):
             
             # In this method only IP packets are considered (interesting for our purposes)
             if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
-                
                 # It is possible that the type value is not our mapping
                 if ether_pkt.type in protocols_code_l2:
                     protocols_packet_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += 1
@@ -326,10 +325,14 @@ def packet_rate_final(folder, mac_address, window=None):
             protocols_packet_counter_layer_2[('IPv4',direction)] += 1
             
             ip_pkt = ether_pkt[IP]
-            
+
             if ip_pkt.proto == protocol_mapping_l3.get('TCP'):
-                # print("Found tcp packet")
+                
+                if not ip_pkt.haslayer(TCP):
+                    # Some pcap files are not complete, so some packet could be halved
+                    continue
                 protocols_packet_counter_layer_3 [('TCP',direction)] += 1
+                
                 tcp_pkt = ip_pkt[TCP]
                 
                 if 'S' in str(tcp_pkt.flags) and not 'A' in str(tcp_pkt.flags):
@@ -340,7 +343,8 @@ def packet_rate_final(folder, mac_address, window=None):
                 protocols_packet_counter_layer_3 [(list(protocol_mapping_l3.keys())[protocols_code_l3.index(ip_pkt.proto)], direction)] += 1
             
             else:
-                protocols_packet_counter_layer_3 ['UNDEFINED-L3'] += 1
+                print("Unrecognized L-3: {}".format(ip_pkt.proto))
+                protocols_packet_counter_layer_3 [('UNDEFINED-L3', direction)] += 1
 
         
         if window is None:
@@ -377,5 +381,4 @@ def packet_rate_final(folder, mac_address, window=None):
 
 
     log_file.close()
-    # log_file_general.close()
     print("done.")
