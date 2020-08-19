@@ -3,8 +3,16 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib
 import argparse
+import numpy as np
 import re
 import packet_processing
+
+protocols_filter = [
+    'IPv4',
+    'IPv6',
+    'TCP',
+    'UDP'
+]
 
 def from_string_to_direction(direction):
     if '<--' == direction:
@@ -93,16 +101,19 @@ def plot_results_by_file(file_name, device_name):
                 
                 dict_values_complete[(protocol,direction)].append(value)
 
-        print(dict_values_complete)
+        # print(dict_values_complete)
+
         for (protocol, direction) in dict_values_complete.keys():
             # Representing only outgoing packets
-            if direction == packet_processing.PktDirection.outgoing:
-                ax.plot(list(range(0, window_counter+1)), dict_values_complete.get((protocol,direction)), label=("{} {}").format(protocol,from_direction_to_string(direction)))
+            if direction == packet_processing.PktDirection.outgoing and protocol in protocols_filter:
+                time_values = np.array(list(range(1, window_counter+2))) * window_size
+                ax.plot(time_values, dict_values_complete.get((protocol,direction)), label=(protocol))
+                ax.set_title("{} packet rate from {} in a window of {} secs".format(from_direction_to_string(direction), device_name, window_size))
         
-        ax.set_xlabel('Time')
+        ax.set_xlabel('Time (secs)')
         ax.set_ylabel('# Packets')
         ax.legend()
-        plt.show()
+        plt.savefig("packet_rate_300.pdf")
     
     
 
