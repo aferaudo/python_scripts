@@ -119,9 +119,15 @@ def print_timestamp_first_last(file_name):
 
 # Utility method
 def computing_timestamp(pkt_metadata):
+    print("metadata sec: {}".format(pkt_metadata.sec))
+    print("metadata usec: {}".format(pkt_metadata.usec))
     timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
     return (timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
 
+def computing_timestamp_2(pkt_metadata):
+    # New timestamp computation
+    microseconds = (pkt_metadata.sec * 1000000) + pkt_metadata.usec
+    return microseconds
 
 
 def destinations_contacted(folder, src_address):
@@ -254,14 +260,14 @@ def packet_rate_final(folder, mac_address, window=None):
                 # Computing timestamp
                 if general_counter == 1: # This is useful only for the first packet (Is there a clever way?)
                     # Computing first_timestamp
-                    first_timestamp = computing_timestamp(pkt_metadata)
+                    first_timestamp = computing_timestamp_2(pkt_metadata)
                 
-                last_timestamp = computing_timestamp(pkt_metadata)
+                last_timestamp = computing_timestamp_2(pkt_metadata)
                 
                 relative_timestamp = last_timestamp - first_timestamp
+                # print(relative_timestamp)
                 
-
-                if relative_timestamp >= window:
+                if relative_timestamp >= (window*1000000):
                     # Useful logs writing
                     logs_data_writing(log_file, window=window_counter)
 
@@ -270,7 +276,7 @@ def packet_rate_final(folder, mac_address, window=None):
                     file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
                     file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
                     file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
-
+                    print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
                     window_counter += 1
                     
                     # Reset counters
@@ -282,7 +288,8 @@ def packet_rate_final(folder, mac_address, window=None):
                     general_counter = 1
 
                     # Computing another time the first_timestamp
-                    first_timestamp = computing_timestamp(pkt_metadata)
+                    first_timestamp = computing_timestamp_2(pkt_metadata)
+                    print("Window after upgrade {}".format(first_timestamp))
 
                     # Reset relative_timestamp
                     relative_timestamp = 0
@@ -373,7 +380,212 @@ def packet_rate_final(folder, mac_address, window=None):
         
     if not window is None:
         # In this case we have to write the packets counted but still not written
+        print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+        # Useful logs writing
+        logs_data_writing(log_file, window=window_counter)
 
+        # Counters writing
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
+        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
+        file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
+
+
+    log_file.close()
+    print("done.")
+
+def packet_rate_final_fixed_window(folder, mac_address, window=None):
+    """
+    The method produces an output file containing the packet rates organised in layers (e.g. IPv4...1000)
+    Args:
+        folder: folder containing pcap files
+        mac_address: device to be analysed
+        window: sliding window allows to select count the packets send or received in a certain time window(default None) (time is in secs)
+    """
+    # TODO Add diurnal and nocturnal window
+    # TODO Add new interesting protocols
+
+    last_folder = folder.split("/")[-2]
+
+    # Loggging organization
+    path = "./processing_results/"
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    path += mac_address + "/"
+    if not os.path.isdir(path):
+        # It is possible that the directory was created in other calls of the method
+        os.mkdir(path)
+    #################################
+
+    output_file_name = path + mac_address + "_rate_by_protocol_" +  last_folder + "_" + str(window) + ".log"
+    # output_file_name_general = mac_address + "_rate_" + last_folder+ "_" + str(window) + ".log"
+
+    # Layers refer to TCP/IP stack (layer1: Host-to-network, layer2: Internet(Network), layer3: Transport, layer4: Application)
+    protocols_packet_counter_layer_1 = Counter()
+    protocols_packet_counter_layer_2 = Counter()
+    protocols_packet_counter_layer_3 = Counter()
+    general_packet_counter = Counter()
+
+    general_counter = 0 # Timestamp guideline
+    window_counter = 0 # Useful for logging purposes
+
+    protocols_code_l3 = list(protocol_mapping_l3.values())
+    protocols_code_l2 = list(protocol_mapping_l2.values())
+
+    # useful for debug = checking that all the packets were counted
+    # debug = 0
+
+    # Open log file
+    log_file = open(output_file_name,'w')
+    # log_file_general = open(output_file_name_general,'w')
+
+    # Ordering Files in the directory (useful for window purposes)
+    files = sorted(os.listdir(folder))
+    total_files = len(files)
+
+    # terminal log
+    file_log = 0
+
+    # Loop in the directory
+    for filename in files:
+        
+        file_log += 1
+        
+        if not filename.endswith(".pcap"):
+            print("Not processed {} ...".format(filename))
+            continue
+            
+        file_name = folder + filename
+        print("Processing {} ...".format(file_name))
+
+        for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
+            
+            general_counter += 1
+            
+            # If window is enabled we should get the timestamp and reset all counters
+            if not window is None:
+
+                # Computing timestamp
+                if general_counter == 1: # This is useful only for the first packet (Is there a clever way?)
+                    # Computing first_timestamp
+                    first_timestamp = computing_timestamp_2(pkt_metadata)
+                
+                last_timestamp = computing_timestamp_2(pkt_metadata)
+                
+                while last_timestamp > first_timestamp + (window * 1000000):
+                    # I need to move the window until I find the one able to host the packet
+                    
+                    # Useful logs writing
+                    logs_data_writing(log_file, window=window_counter)
+
+                    # Counters writing
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
+                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
+                    file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
+                    print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+                    window_counter += 1
+                    
+                    # Reset counters
+                    protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
+                    protocols_packet_counter_layer_2.clear()
+                    protocols_packet_counter_layer_3.clear()
+                    general_packet_counter.clear()
+
+                    general_counter = 1
+
+                    # Computing another time the first_timestamp
+                    first_timestamp = first_timestamp + (window*1000000)
+                    print("Window after upgrade {}".format(first_timestamp))
+                    
+            
+            # Obtaining ether packet
+            ether_pkt = Ether(pkt_data)
+            
+            direction = PktDirection.not_defined
+            
+            if 'type' not in ether_pkt.fields:
+                # LLC frames will have 'len' instead of 'type'.
+                # We do not consider them in this analysis
+                protocols_packet_counter_layer_1[('UNDEFINED-L1', direction)] += 1
+                continue
+            
+            
+            # Considering only outbound packets
+            if ether_pkt.src != mac_address and ether_pkt.dst != mac_address:
+                continue
+
+            # Defining direction
+            if ether_pkt.src == mac_address:
+                direction = PktDirection.outgoing
+            else:
+                direction = PktDirection.incoming
+            
+            # Counting all the input and output packets 
+            general_packet_counter[direction] += 1
+            
+            # In this method only IP packets are considered (interesting for our purposes)
+            if ether_pkt.type != protocol_mapping_l2.get('IPv4'):
+
+                # It is possible that the type value is not our mapping
+                if ether_pkt.type in protocols_code_l2:
+                    protocols_packet_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += 1
+                else:
+                    print("Unrecognized type l2: {}".format(ether_pkt.type))
+                    protocols_packet_counter_layer_2[(str(ether_pkt.type), direction)] += 1
+                continue
+            
+            # Even if is an IPv4 packet it can be a halved packet
+            if not ether_pkt.haslayer(IP):
+                continue
+            protocols_packet_counter_layer_2[('IPv4',direction)] += 1
+            
+            ip_pkt = ether_pkt[IP]
+
+            if ip_pkt.proto == protocol_mapping_l3.get('TCP'):
+                
+                if not ip_pkt.haslayer(TCP):
+                    # Some pcap files are not complete, so some packet could be halved
+                    continue
+                protocols_packet_counter_layer_3 [('TCP',direction)] += 1
+                
+                tcp_pkt = ip_pkt[TCP]
+                
+                if 'S' in str(tcp_pkt.flags) and not 'A' in str(tcp_pkt.flags):
+                    # Useful to understand the normal SYN traffic (avoiding SYN flood attacks)
+                    protocols_packet_counter_layer_3[("TCP-SYN-REQ-TO-" + ip_pkt.dst,direction)] +=1
+
+            elif ip_pkt.proto in protocols_code_l3:
+                protocols_packet_counter_layer_3 [(list(protocol_mapping_l3.keys())[protocols_code_l3.index(ip_pkt.proto)], direction)] += 1
+            
+            else:
+                print("Unrecognized L-3: {}".format(ip_pkt.proto))
+                protocols_packet_counter_layer_3 [(str(ip_pkt.proto), direction)] += 1
+
+        
+        if window is None:
+
+            # Useful logs writing
+            logs_data_writing(log_file)
+
+            # Counters writing
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1)
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2)
+            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+            file_log_counter_writing(log_file, general_packet_counter)
+
+            # Reset Counter
+            protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
+            protocols_packet_counter_layer_2.clear()
+            protocols_packet_counter_layer_3.clear()
+            general_packet_counter.clear()
+        
+
+        print("{}: {}/{} files analysed...".format(mac_address, file_log, total_files))
+        
+    if not window is None:
+        # In this case we have to write the packets counted but still not written
+        print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
         # Useful logs writing
         logs_data_writing(log_file, window=window_counter)
 
