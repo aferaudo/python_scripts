@@ -54,21 +54,26 @@ def logs_data_writing(file_1, window=-1):
         file_1.write("-------------------:NEW-PcapFile:-------------------\n")
 
 # Utility method
-def file_log_counter_writing(opened_file, counter_dict, window=-1):
+def counters_logger(opened_file, counter_dict, window=-1, is_byte=False):
     total = 0
     for key in counter_dict.keys():
         if key == PktDirection.incoming:
-            opened_file.write('Incoming:{}\n'.format(counter_dict[key]))
+            to_write = 'Incoming:{}\n'.format(counter_dict[key]) if not is_byte else 'Incoming bytes:{}\n'.format(counter_dict[key])
+            opened_file.write(to_write)
+        elif key == PktDirection.outgoing:
+            to_write = 'Outgoing:{}\n'.format(counter_dict[key]) if not is_byte else 'Outgoing bytes:{}\n'.format(counter_dict[key])
+            opened_file.write(to_write)
         else:
-            opened_file.write('Outgoing:{}\n'.format(counter_dict[key]))
-        
+            to_write = 'Undefined direction:{}\n'.format(counter_dict[key]) if not is_byte else 'Undefined direction bytes:{}\n'.format(counter_dict[key])
+            opened_file.write(to_write)
         total += counter_dict[key]
     
-    opened_file.write("Total:{}\n\n".format(total))
+    to_write = "Total:{}\n\n".format(total) if not is_byte else "Total bytes:{}\n\n".format(total)
+    opened_file.write(to_write)
 
 
 # Utility method
-def file_log_counter_writing_protocol(opened_file, counter_dict, separator="", window=-1):
+def counters_logger_protocol(opened_file, counter_dict, separator=""):
     for (proto, direction) in counter_dict.keys():
         pkts = counter_dict.get((proto,direction))
         opened_file.write("{}{}:Protocol:::{}...{}\n".format(separator, direction_view(direction), proto, pkts))
@@ -115,16 +120,19 @@ def print_timestamp_first_last(file_name):
     
     print("{}: First packet captured at {}, last packet captured {}".format(file_name, first_timestamp, last_timestamp))
 
-
+# Utility method
+def reset_counters(*counters):
+    for counter in counters:
+        counter.clear()
 
 # Utility method
-def computing_timestamp(pkt_metadata):
-    print("metadata sec: {}".format(pkt_metadata.sec))
-    print("metadata usec: {}".format(pkt_metadata.usec))
-    timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
-    return (timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
+# def computing_timestamp(pkt_metadata):
+#     print("metadata sec: {}".format(pkt_metadata.sec))
+#     print("metadata usec: {}".format(pkt_metadata.usec))
+#     timestamp = datetime.datetime.fromtimestamp(pkt_metadata.sec)
+#     return (timestamp + datetime.timedelta(microseconds=pkt_metadata.usec)).timestamp()
 
-def computing_timestamp_2(pkt_metadata):
+def computing_timestamp(pkt_metadata):
     # New timestamp computation
     microseconds = (pkt_metadata.sec * 1000000) + pkt_metadata.usec
     return microseconds
@@ -260,9 +268,9 @@ def packet_rate_final(folder, mac_address, window=None):
                 # Computing timestamp
                 if general_counter == 1: # This is useful only for the first packet (Is there a clever way?)
                     # Computing first_timestamp
-                    first_timestamp = computing_timestamp_2(pkt_metadata)
+                    first_timestamp = computing_timestamp(pkt_metadata)
                 
-                last_timestamp = computing_timestamp_2(pkt_metadata)
+                last_timestamp = computing_timestamp(pkt_metadata)
                 
                 relative_timestamp = last_timestamp - first_timestamp
                 # print(relative_timestamp)
@@ -272,11 +280,14 @@ def packet_rate_final(folder, mac_address, window=None):
                     logs_data_writing(log_file, window=window_counter)
 
                     # Counters writing
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-                    file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
-                    print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+                    counters_logger(log_file, general_packet_counter, window=window_counter)
+                    
+                    # Debugging
+                    # print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+                    
                     window_counter += 1
                     
                     # Reset counters
@@ -288,8 +299,10 @@ def packet_rate_final(folder, mac_address, window=None):
                     general_counter = 1
 
                     # Computing another time the first_timestamp
-                    first_timestamp = computing_timestamp_2(pkt_metadata)
-                    print("Window after upgrade {}".format(first_timestamp))
+                    first_timestamp = computing_timestamp(pkt_metadata)
+                    
+                    # Debugging
+                    # print("Window after upgrade {}".format(first_timestamp))
 
                     # Reset relative_timestamp
                     relative_timestamp = 0
@@ -364,10 +377,10 @@ def packet_rate_final(folder, mac_address, window=None):
             logs_data_writing(log_file)
 
             # Counters writing
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1)
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2)
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
-            file_log_counter_writing(log_file, general_packet_counter)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+            counters_logger(log_file, general_packet_counter)
 
             # Reset Counter
             protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
@@ -385,14 +398,16 @@ def packet_rate_final(folder, mac_address, window=None):
         logs_data_writing(log_file, window=window_counter)
 
         # Counters writing
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-        file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+        counters_logger(log_file, general_packet_counter)
 
 
     log_file.close()
     print("done.")
+
+
 
 def packet_rate_final_fixed_window(folder, mac_address, window=None):
     """
@@ -425,6 +440,7 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
     protocols_packet_counter_layer_2 = Counter()
     protocols_packet_counter_layer_3 = Counter()
     general_packet_counter = Counter()
+    bytes_counter = Counter() # Useful to distinguish between Incoming and outgoing direction
 
     general_counter = 0 # Timestamp guideline
     window_counter = 0 # Useful for logging purposes
@@ -468,35 +484,42 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
                 # Computing timestamp
                 if general_counter == 1: # This is useful only for the first packet (Is there a clever way?)
                     # Computing first_timestamp
-                    first_timestamp = computing_timestamp_2(pkt_metadata)
+                    first_timestamp = computing_timestamp(pkt_metadata)
                 
-                last_timestamp = computing_timestamp_2(pkt_metadata)
+                last_timestamp = computing_timestamp(pkt_metadata)
                 
                 while last_timestamp > first_timestamp + (window * 1000000):
                     # I need to move the window until I find the one able to host the packet
-                    
+
                     # Useful logs writing
                     logs_data_writing(log_file, window=window_counter)
 
                     # Counters writing
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
-                    file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-                    file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
-                    print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+                    counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+                    counters_logger(log_file, general_packet_counter)
+                    counters_logger(log_file, bytes_counter, is_byte=True)
+                    
+                    # Debugging
+                    # print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+                    
                     window_counter += 1
                     
                     # Reset counters
-                    protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
-                    protocols_packet_counter_layer_2.clear()
-                    protocols_packet_counter_layer_3.clear()
-                    general_packet_counter.clear()
-
+                    reset_counters(protocols_packet_counter_layer_1, 
+                            protocols_packet_counter_layer_2, 
+                            protocols_packet_counter_layer_3, 
+                            general_packet_counter, 
+                            bytes_counter)
+                    
                     general_counter = 1
 
                     # Computing another time the first_timestamp
                     first_timestamp = first_timestamp + (window*1000000)
-                    print("Window after upgrade {}".format(first_timestamp))
+                    
+                    # Debugging
+                    # print("Window after upgrade {}".format(first_timestamp))
                     
             
             # Obtaining ether packet
@@ -504,12 +527,13 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
             
             direction = PktDirection.not_defined
             
+            
             if 'type' not in ether_pkt.fields:
                 # LLC frames will have 'len' instead of 'type'.
                 # We do not consider them in this analysis
                 protocols_packet_counter_layer_1[('UNDEFINED-L1', direction)] += 1
+                bytes_counter[direction] += len(pkt_data)
                 continue
-            
             
             # Considering only outbound packets
             if ether_pkt.src != mac_address and ether_pkt.dst != mac_address:
@@ -521,6 +545,9 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
             else:
                 direction = PktDirection.incoming
             
+            # Tracking packet lenght
+            bytes_counter[direction] += len(pkt_data)
+
             # Counting all the input and output packets 
             general_packet_counter[direction] += 1
             
@@ -569,32 +596,49 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
             logs_data_writing(log_file)
 
             # Counters writing
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1)
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2)
-            file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
-            file_log_counter_writing(log_file, general_packet_counter)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+            counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+            counters_logger(log_file, general_packet_counter)
+            counters_logger(log_file, bytes_counter, is_byte=True)
 
             # Reset Counter
-            protocols_packet_counter_layer_1.clear() # Deletes all the elements keys + values
-            protocols_packet_counter_layer_2.clear()
-            protocols_packet_counter_layer_3.clear()
-            general_packet_counter.clear()
+            reset_counters(protocols_packet_counter_layer_1, 
+                            protocols_packet_counter_layer_2, 
+                            protocols_packet_counter_layer_3, 
+                            general_packet_counter, 
+                            bytes_counter)
         
 
         print("{}: {}/{} files analysed...".format(mac_address, file_log, total_files))
         
     if not window is None:
         # In this case we have to write the packets counted but still not written
-        print("Start window {}: {}\nEnd window {}: {}".format(window_counter, first_timestamp, window_counter, last_timestamp))
+    
         # Useful logs writing
         logs_data_writing(log_file, window=window_counter)
 
         # Counters writing
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_1, window=window_counter)
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_2, window=window_counter)
-        file_log_counter_writing_protocol(log_file, protocols_packet_counter_layer_3, separator="\t", window=window_counter)
-        file_log_counter_writing(log_file, general_packet_counter, window=window_counter)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_1)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_2)
+        counters_logger_protocol(log_file, protocols_packet_counter_layer_3, separator="\t")
+        counters_logger(log_file, general_packet_counter)
+        counters_logger(log_file, bytes_counter, is_byte=True)
 
 
     log_file.close()
     print("done.")
+
+
+
+def testing(file_name):
+    counter = 0 
+    for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
+        
+        if len(pkt_data) == 74:
+            print(len(pkt_data))
+       
+
+
+# file_name = "/Users/angeloferaudo/Desktop/Research activities/Internship July-September/IoT Data/data/2c:59:8a:6e:f0:54/unctrl/2019-10-01_09.40.45_192.168.20.172.pcap"
+# testing(file_name)
