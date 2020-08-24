@@ -206,7 +206,7 @@ def processing_results_by_file(file_name,device_name, showText):
         sys.exit(-1)
     
     ax.set_ylabel('Bytes')
-    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(INCOMING_BYTES, OUTGOING_BYTES, device_name, window_size))
+    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(INCOMING, OUTGOING, device_name, window_size))
     plt.savefig("{}_incoming_outgoing_bytes_{}.pdf".format(device_name, window_size))
 
     # Plotting undefined direction bytes and total bytes
@@ -221,7 +221,7 @@ def processing_results_by_file(file_name,device_name, showText):
         sys.exit(-1)
     
     ax.set_ylabel('Bytes')
-    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(UNDEFINED_BYTES, TOTAL_BYTES, device_name, window_size))
+    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(UNDEFINED_DIRECTION, TOTAL, device_name, window_size))
 
     plt.savefig("{}_undefined_total_bytes_{}.pdf".format(device_name, window_size))
 
@@ -237,7 +237,7 @@ def processing_results_by_file(file_name,device_name, showText):
         sys.exit(-1)
     
     ax.set_ylabel('# Packets')
-    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(INCOMING, OUTGOING, device_name, window_size))
+    ax.set_title("{} and {} packets ({}) in a window of {} secs".format(INCOMING, OUTGOING, device_name, window_size))
 
     plt.savefig("{}_incoming_outgoing_packets_{}.pdf".format(device_name, window_size))
 
@@ -253,12 +253,13 @@ def processing_results_by_file(file_name,device_name, showText):
         sys.exit(-1)
     
     ax.set_ylabel('# Packets')
-    ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(UNDEFINED_DIRECTION, TOTAL, device_name, window_size))
+    ax.set_title("{} and {} packets ({}) in a window of {} secs".format(UNDEFINED_DIRECTION, TOTAL, device_name, window_size))
     
     plt.savefig("{}_undefined_total_packets_{}.pdf".format(device_name, window_size))
     
     # Plotting packets grouped by protocol
     fig, ax = plt.subplots(figsize = (10, 5))
+    plt.grid(linestyle="dashed", color='lightgrey') 
     base_lines = []
     for protocol, direction in temp_dict.keys():
         if protocol in protocols_filter and direction == packet_processing.PktDirection.outgoing:
@@ -273,7 +274,7 @@ def processing_results_by_file(file_name,device_name, showText):
     ax.set_xlabel('Time in secs')
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
-    plt.savefig("{}_outgoing_pakckes_protocols_{}.pdf".format(device_name, window_size))
+    plt.savefig("{}_outgoing_packets_protocols_{}.pdf".format(device_name, window_size))
     # plt.show()
 
 
