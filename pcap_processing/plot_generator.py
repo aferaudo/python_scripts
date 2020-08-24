@@ -23,6 +23,10 @@ INCOMING_BYTES = INCOMING + " bytes"
 UNDEFINED_BYTES= "Undefined direction bytes"
 TOTAL_BYTES = TOTAL + " bytes"
 
+bbox_props = dict(boxstyle="square,pad=0.1", alpha=0.5, fc="lightgrey")
+font=matplotlib.font_manager.FontProperties()
+font.set_weight('bold')
+
 
 def from_string_to_direction(direction):
     if '<--' == direction or INCOMING in direction:
@@ -54,8 +58,13 @@ def initialise_dict(dictionary, is_bytes=False):
         dictionary[TOTAL_BYTES.replace(' ', '_')] = []
 
 
+def highlight_max_value_y_axis(ax, max_value, text, color, showText=False):
+    ax.axhline(y=max_value, color=color, ls='--', lw=1)
+    if showText:
+        ax.text(1000, (max_value), ('{} max= {}'.format(text, max_value)), size=8, fontproperties=font)
 
-def lists_plotting(x_values, *lists_to_plot, labels):
+
+def lists_plotting(x_values, *lists_to_plot, labels, showText):
     """
     Prints different list of values on Y axis. 
     The method requires the labels for each of the line to plot
@@ -66,29 +75,36 @@ def lists_plotting(x_values, *lists_to_plot, labels):
     """
     if len(lists_to_plot) != len(labels):
         return None
-
+    
     fig, ax = plt.subplots(figsize = (10, 5))
     
+    plt.grid(linestyle="dashed", color='lightgrey') 
+    base_lines = []
     for i, to_plot in enumerate(lists_to_plot):
-        ax.plot(x_values, to_plot, label=labels[i])
-    
+        max_value = max(to_plot)
+        base_line,  = ax.plot(x_values, to_plot, label=labels[i])
+        highlight_max_value_y_axis(ax=ax, max_value=max_value, text=labels[i], color=base_line.get_color(), showText=showText)
+        base_lines.append(base_line)
+        
     # Standard for all packets
     ax.set_xlabel('Time in secs')
-   
+    ax.axhline(y=0, color='k')
+    ax.axvline(x=0, color='k')
+    ax.legend(handles=base_lines, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
     return ax
         
      
-def processing_results_by_directory(folder, device_name):
+def processing_results_by_directory(folder, device_name, showText):
     
     # Ordering Files in the directory (useful for window purposes)
     files = os.listdir(folder)
 
     for filename in files:
         file_path = folder + filename
-        processing_results_by_file(file_path, device_name)
+        processing_results_by_file(file_path, device_name, showText)
 
 
-def processing_results_by_file(file_name,device_name):
+def processing_results_by_file(file_name,device_name, showText):
     
     
     print("Processing {} ...".format(file_name))
@@ -180,7 +196,10 @@ def processing_results_by_file(file_name,device_name):
             temp_dict[(protocol,direction)].append(value)
         
     #  Plotting incoming and outgoing bytes
-    ax = lists_plotting(time_values, packets_lenght.get(INCOMING_BYTES.replace(' ','_')), packets_lenght.get(OUTGOING_BYTES.replace(' ','_')), labels=[INCOMING_BYTES, OUTGOING_BYTES])
+    ax = lists_plotting(time_values, packets_lenght.get(INCOMING_BYTES.replace(' ','_')), 
+                        packets_lenght.get(OUTGOING_BYTES.replace(' ','_')), 
+                        labels=[INCOMING_BYTES, OUTGOING_BYTES], 
+                        showText=showText)
     
     if ax is None:
         print('Somthing went wrong')
@@ -188,11 +207,14 @@ def processing_results_by_file(file_name,device_name):
     
     ax.set_ylabel('Bytes')
     ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(INCOMING_BYTES, OUTGOING_BYTES, device_name, window_size))
-    ax.legend()
     plt.savefig("{}_incoming_outgoing_bytes_{}.pdf".format(device_name, window_size))
 
     # Plotting undefined direction bytes and total bytes
-    ax = lists_plotting(time_values, packets_lenght.get(UNDEFINED_BYTES.replace(' ','_')), packets_lenght.get(TOTAL_BYTES.replace(' ','_')), labels=[UNDEFINED_BYTES, TOTAL_BYTES])
+    ax = lists_plotting(time_values, 
+                        packets_lenght.get(UNDEFINED_BYTES.replace(' ','_')), 
+                        packets_lenght.get(TOTAL_BYTES.replace(' ','_')), 
+                        labels=[UNDEFINED_BYTES, TOTAL_BYTES],
+                        showText=showText)
     
     if ax is None:
         print('Somthing went wrong')
@@ -200,12 +222,15 @@ def processing_results_by_file(file_name,device_name):
     
     ax.set_ylabel('Bytes')
     ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(UNDEFINED_BYTES, TOTAL_BYTES, device_name, window_size))
-    ax.legend()
 
     plt.savefig("{}_undefined_total_bytes_{}.pdf".format(device_name, window_size))
 
     # Plotting incoming and outgoing packets
-    ax = lists_plotting(time_values, packets_traffic.get(INCOMING), packets_traffic.get(OUTGOING), labels=[INCOMING, OUTGOING])
+    ax = lists_plotting(time_values, 
+                        packets_traffic.get(INCOMING), 
+                        packets_traffic.get(OUTGOING), 
+                        labels=[INCOMING, OUTGOING],
+                        showText=showText)
     
     if ax is None:
         print('Somthing went wrong')
@@ -213,12 +238,15 @@ def processing_results_by_file(file_name,device_name):
     
     ax.set_ylabel('# Packets')
     ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(INCOMING, OUTGOING, device_name, window_size))
-    ax.legend()
 
     plt.savefig("{}_incoming_outgoing_packets_{}.pdf".format(device_name, window_size))
 
     # Plotting undefined direction packet and total packet
-    ax = lists_plotting(time_values, packets_traffic.get(UNDEFINED_DIRECTION), packets_traffic.get(TOTAL), labels=[UNDEFINED_DIRECTION, TOTAL])
+    ax = lists_plotting(time_values, 
+                        packets_traffic.get(UNDEFINED_DIRECTION), 
+                        packets_traffic.get(TOTAL), 
+                        labels=[UNDEFINED_DIRECTION, TOTAL],
+                        showText=showText)
     
     if ax is None:
         print('Somthing went wrong')
@@ -226,21 +254,30 @@ def processing_results_by_file(file_name,device_name):
     
     ax.set_ylabel('# Packets')
     ax.set_title("{} and {} bytes ({}) in a window of {} secs".format(UNDEFINED_DIRECTION, TOTAL, device_name, window_size))
-    ax.legend()
     
     plt.savefig("{}_undefined_total_packets_{}.pdf".format(device_name, window_size))
     
     # Plotting packets grouped by protocol
     fig, ax = plt.subplots(figsize = (10, 5))
+    base_lines = []
     for protocol, direction in temp_dict.keys():
         if protocol in protocols_filter and direction == packet_processing.PktDirection.outgoing:
-            ax.plot(time_values, temp_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))))
+            max_value = max(temp_dict.get((protocol, direction)))
+            base_line, = ax.plot(time_values, temp_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))))
+            highlight_max_value_y_axis(ax=ax, max_value=max_value, text="{} packets ".format(protocol), color=base_line.get_color(), showText=showText)
+            base_lines.append(base_line)
+    
+    ax.legend(handles=base_lines, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
     ax.set_title("{} packet rate from {} in a window of {} secs".format(from_direction_to_string(direction), device_name, window_size))
     ax.set_ylabel('# Packets')
     ax.set_xlabel('Time in secs')
-    ax.legend()
+    ax.axhline(y=0, color='k')
+    ax.axvline(x=0, color='k')
     plt.savefig("{}_outgoing_pakckes_protocols_{}.pdf".format(device_name, window_size))
     # plt.show()
+
+
+
 
 def main(argv):
     # Checking if the directory exists
@@ -254,22 +291,23 @@ def main(argv):
 
     if os.path.isfile(args.path):
         print("File found!")
-        processing_results_by_file(args.path, device_name)
+        processing_results_by_file(args.path, device_name, args.text)
         sys.exit(0)
 
     if not os.path.isdir(args.path):
         print('"{}" does not exist'.format(args.path), file=sys.stderr)
         sys.exit(-1)
 
-    processing_results_by_directory(args.path, device_name)
+    processing_results_by_directory(args.path, device_name, args.text)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Plotting pcap processer's result")
 
-    # TODO implement plotting by file feature
-
     parser.add_argument("--path", "-p", type=str, required=True, help="folder of data")
+
+    parser.add_argument("--text", "-t", action='store_true',
+                        help='show major details')
 
     args = parser.parse_args()
     
