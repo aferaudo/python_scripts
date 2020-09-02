@@ -472,10 +472,13 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
             continue
             
         file_name = folder + filename
-        print("Processing {} ...".format(file_name))
+        
+        if os.stat(file_name).st_size == 0:
+            print("{} is empty. Skipping...".format(file_name))
+            continue
 
+        print("Processing {} ...".format(file_name))
         for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
-            
             general_counter += 1
             
             # If window is enabled we should get the timestamp and reset all counters
@@ -521,9 +524,14 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
                     # Debugging
                     # print("Window after upgrade {}".format(first_timestamp))
                     
-            
+
             # Obtaining ether packet
-            ether_pkt = Ether(pkt_data)
+            try:
+                # There are some cases where the pcap file cut the packet at the Ethernet layer
+                # This packets generate an error runtime (struct.error: unpack requires a buffer of 6 bytes), so they must be discarded
+                ether_pkt = Ether(pkt_data)
+            except BaseException:
+                continue
             
             direction = PktDirection.not_defined
             
