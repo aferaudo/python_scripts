@@ -43,6 +43,10 @@ def main(argv):
         print("Window size: {}".format(args.window))
         packet_processing.packet_rate_final_fixed_window(args.folder, mac_address, args.window)
 
+    if args.bytes_rate_fixed:
+        print("Window size: {}".format(args.window))
+        packet_processing.bytes_rate_final_fixed_window(args.folder, mac_address, args.window)
+
     if args.destinations_contacted:
         if args.src_address is None:
             print('You must specify the source ip address', file=sys.stderr)
@@ -58,9 +62,11 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--folder', metavar='<folder>',
                         help='folder containing pcap file to parse', type=str, required=True)
     parser.add_argument('--packet_rate_final', action='store_true',
-                        help='packet rate considering all packets divided by protocol')
+                        help='packet rate considering all packets grouped by protocol')
     parser.add_argument('--packet_rate_fixed', action='store_true',
-                        help='packet rate considering all packets divided by protocol in fixed placed window')
+                        help='packet rate considering all packets grouped by protocol in fixed placed window')
+    parser.add_argument('--bytes_rate_fixed', action='store_true',
+                        help='bytes rate considering all packets grouped by protocol in fixed placed window')
     parser.add_argument('--window','-w', type=int,
                         help='window size in secs')
     parser.add_argument('--destinations_contacted', action='store_true',
