@@ -137,7 +137,6 @@ def computing_timestamp(pkt_metadata):
     microseconds = (pkt_metadata.sec * 1000000) + pkt_metadata.usec
     return microseconds
 
-
 def destinations_contacted(folder, src_address):
     """
     This method provides an overview about the destinations contacted by a devices with a specific ip address. 
@@ -189,7 +188,6 @@ def destinations_contacted(folder, src_address):
     
     out_file.close()
     
-
 # Avoid to process the same pcap file multiple times
 def packet_rate_final(folder, mac_address, window=None):
     """
@@ -404,7 +402,6 @@ def packet_rate_final(folder, mac_address, window=None):
 
     log_file.close()
     print("done.")
-
 
 def packet_rate_final_fixed_window(folder, mac_address, window=None):
     """
@@ -631,7 +628,6 @@ def packet_rate_final_fixed_window(folder, mac_address, window=None):
     log_file.close()
     print("done.")
 
-
 def bytes_rate_final_fixed_window(folder, mac_address, window=None):
     """
     The method produces an output file containing the bytes rates organised in protocol layers (e.g. IPv4...1000)
@@ -770,7 +766,7 @@ def bytes_rate_final_fixed_window(folder, mac_address, window=None):
 
                 # It is possible that the type value is not our mapping
                 if ether_pkt.type in protocols_code_l2:
-                    protocols_bytes_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += len(ether_pkt)
+                    protocols_bytes_counter_layer_2[(list(protocol_mapping_l2.keys())[protocols_code_l2.index(ether_pkt.type)], direction)] += len(pkt_data)
                 else:
                     print("Unrecognized type l2: {}".format(ether_pkt.type))
                     protocols_bytes_counter_layer_2[(str(ether_pkt.type), direction)] += len(pkt_data)
