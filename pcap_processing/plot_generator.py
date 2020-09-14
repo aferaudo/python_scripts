@@ -7,12 +7,17 @@ import numpy as np
 import re
 import packet_processing
 
-protocols_filter = [
-    'IPv4',
-    'IPv6',
-    'TCP',
-    'UDP'
-]
+protocols_filter = {
+    'IPv4':'blue',
+    'IPv6':'red',
+    'TCP':'green',
+    'UDP':'orange'
+}
+
+
+# This dictionary contains useful values for analysis
+resulting_values = {}
+
 
 categories = {}
 devices_cat_match = {}
@@ -95,7 +100,10 @@ def lists_plotting(x_values, *lists_to_plot, labels, showText):
     ax.legend(handles=base_lines, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
     return fig, ax
 
-def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_address,packets=True):
+def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_address, packets=True):
+    # TODO This function contains too much boiler plate code, which is due to the usage of two graphs!
+
+    
     # Plotting packets/bytes grouped by protocol
     fig, ax = plt.subplots(figsize = (10, 5))
     fig2, ax2 = plt.subplots(figsize = (10, 5))
@@ -106,14 +114,24 @@ def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_ad
     labeling = "packets" if packets else "bytes"
 
     for protocol, direction in data_dict.keys():
-        if protocol in protocols_filter and direction == packet_processing.PktDirection.outgoing:
+        if protocol in protocols_filter.keys() and direction == packet_processing.PktDirection.outgoing:
             max_value = max(data_dict.get((protocol, direction)))
-            base_line, = ax.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))))
+            base_line, = ax.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol))
+            
+            # Analysis values
+            resulting_values[mac_address].append('avg_{}_{}: {}'.format(protocol, from_direction_to_string(direction), round(np.mean(data_dict.get((protocol, direction))), 3)))
+            resulting_values[mac_address].append('max_{}_{}: {}'.format(protocol, from_direction_to_string(direction), max_value))
+            
             highlight_max_value_y_axis(ax=ax, max_value=max_value, text="{} {} ".format(protocol, labeling), color=base_line.get_color(), showText=showText)
             base_lines.append(base_line)
         elif protocol in protocols_filter and direction == packet_processing.PktDirection.incoming:
             max_value = max(data_dict.get((protocol, direction)))
-            base_line2, = ax2.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))))
+            base_line2, = ax2.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol))
+            
+            # Analysis values
+            resulting_values[mac_address].append('avg_{}_{}: {}'.format(protocol, from_direction_to_string(direction), round(np.mean(data_dict.get((protocol, direction))), 3)))
+            resulting_values[mac_address].append('max_{}_{}: {}'.format(protocol, from_direction_to_string(direction), max_value))
+            
             highlight_max_value_y_axis(ax=ax2, max_value=max_value, text="{} {} ".format(protocol, labeling), color=base_line2.get_color(), showText=showText)
             base_lines2.append(base_line2)
     
@@ -160,6 +178,8 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
         return
     window_size = int(window_size)
     mac_address = splitted_file_name[0]
+
+    resulting_values[mac_address] = []
 
     packets_traffic = {}
     packets_lenght = {}
@@ -258,6 +278,13 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
                 value = 0 # For that window no packets have been sent
             
             temp_dict[(protocol,direction)].append(value)
+    
+    # Analysis values
+    resulting_values[mac_address].append('Type: {}'.format(categories.get(devices_cat_match.get(mac_address))))
+    resulting_values[mac_address].append('avg_tot: {}'.format(round(np.mean(packets_traffic.get(TOTAL)), 3)))
+    resulting_values[mac_address].append('avg_incoming: {}'.format(round(np.mean(packets_traffic.get(INCOMING)), 3)))
+    resulting_values[mac_address].append('avg_outgoing: {}'.format(round(np.mean(packets_traffic.get(OUTGOING)), 3)))
+    ################################
 
     if total:    
         #  Plotting incoming and outgoing bytes
@@ -380,6 +407,11 @@ def main(argv):
         if os.path.isdir(path):
             processing_results_by_directory(path, args.text, args.total, args.packets_protocol, args.bytes_protocol, args.filter_by_window)
 
+    if args.analysis:
+        with open(args.analysis, "w+") as analysis_file:
+            for key in resulting_values.keys():
+                analysis_file.write("{}: {}\n\n".format(key, resulting_values.get(key)))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Plotting pcap processer's result")
 
@@ -403,6 +435,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--text", "-x", action='store_true',
                         help='show major details')
+    
+    parser.add_argument("--analysis", "-a", type=str,
+                        help='give an output file, named with a specified string, containing useful data (very interesting for analysis purposes)')
 
     args = parser.parse_args()
     
