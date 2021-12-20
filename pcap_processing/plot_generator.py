@@ -14,6 +14,18 @@ protocols_filter = {
     'UDP':'orange'
 }
 
+protocols_markers = {
+    'IPv4':'8',
+    'IPv6':'*',
+    'TCP':'o',
+    'UDP':'x'
+}
+
+protocols_layer = {
+    4: ["UDP", "TCP"],
+    3: ["IPv4", "IPv5"]
+    # ... 
+}
 
 # This dictionary contains useful values for analysis
 resulting_values = {}
@@ -36,6 +48,7 @@ bbox_props = dict(boxstyle="square,pad=0.1", alpha=0.5, fc="lightgrey")
 font=matplotlib.font_manager.FontProperties()
 font.set_weight('bold')
 
+    
 
 def from_string_to_direction(direction):
     if '<--' == direction or INCOMING in direction:
@@ -52,6 +65,10 @@ def from_direction_to_string(direction):
         return "outgoing"
     else:
         return "undefined"
+
+def plot_bars(ax, x_values, y_values):
+    ax.bar(x_values, y_values, width=0.35, secondary_y=True)
+
 
 def initialise_dict(dictionary, is_bytes=False):
 
@@ -103,7 +120,7 @@ def lists_plotting(x_values, *lists_to_plot, labels, showText):
 def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_address, packets=True):
     # TODO This function contains too much boiler plate code, which is due to the usage of two graphs!
 
-    
+
     # Plotting packets/bytes grouped by protocol
     fig, ax = plt.subplots(figsize = (10, 5))
     fig2, ax2 = plt.subplots(figsize = (10, 5))
@@ -116,17 +133,27 @@ def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_ad
     for protocol, direction in data_dict.keys():
         if protocol in protocols_filter.keys() and direction == packet_processing.PktDirection.outgoing:
             max_value = max(data_dict.get((protocol, direction)))
-            base_line, = ax.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol))
+            # base_line, = ax.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol), 
+            #                    marker=protocols_markers.get(protocol), linestyle='dashdot', linewidth=1.2)
             
+            base_line, = ax.plot(time_values, data_dict.get((protocol, direction)), label=("{}".format(protocol)), color=protocols_filter.get(protocol), 
+                               marker=protocols_markers.get(protocol), linestyle='dashdot', linewidth=1.2, markersize=3)
+            other_line, = ax.plot(time_values, np.random.randint(1,3000,len(time_values)), label="TCP iptables", marker=protocols_markers.get(protocol), linestyle='dashdot', linewidth=1.2, markersize=3)
             # Analysis values
             resulting_values[mac_address].append('avg_{}_{}: {}'.format(protocol, from_direction_to_string(direction), round(np.mean(data_dict.get((protocol, direction))), 3)))
             resulting_values[mac_address].append('max_{}_{}: {}'.format(protocol, from_direction_to_string(direction), max_value))
             
             highlight_max_value_y_axis(ax=ax, max_value=max_value, text="{} {} ".format(protocol, labeling), color=base_line.get_color(), showText=showText)
+            # plot_bars(ax=ax, x_values=data_dict.get((protocol, direction)), y_values=time_values)
             base_lines.append(base_line)
+            base_lines.append(other_line)
         elif protocol in protocols_filter and direction == packet_processing.PktDirection.incoming:
             max_value = max(data_dict.get((protocol, direction)))
-            base_line2, = ax2.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol))
+            # base_line2, = ax2.plot(time_values, data_dict.get((protocol, direction)), label=("{} {}".format(protocol, from_direction_to_string(direction))), color=protocols_filter.get(protocol),
+            #                         marker=protocols_markers.get(protocol), linestyle='dashdot', linewidth=1.2)
+            
+            base_line2, = ax2.plot(time_values, data_dict.get((protocol, direction)), label=("{}".format(protocol)), color=protocols_filter.get(protocol),
+                                    marker=protocols_markers.get(protocol), linestyle='dashdot', linewidth=1.2)
             
             # Analysis values
             resulting_values[mac_address].append('avg_{}_{}: {}'.format(protocol, from_direction_to_string(direction), round(np.mean(data_dict.get((protocol, direction))), 3)))
@@ -136,22 +163,29 @@ def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_ad
             base_lines2.append(base_line2)
     
     # Plotting outgoing
-    ax.legend(handles=base_lines, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
-    ax.set_title("{} {} rate from {} in a window of {} secs".format(from_direction_to_string(packet_processing.PktDirection.outgoing), labeling.replace('s', ''), mac_address, window_size))
+    # ax.legend(handles=base_lines, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
+    ax.legend(handles=base_lines, loc='upper right', fontsize='x-small')
+    # ax.set_title("{} {} rate from {} in a window of {} secs".format(from_direction_to_string(packet_processing.PktDirection.outgoing), labeling.replace('s', ''), mac_address, window_size))
     ax.set_ylabel('# Packets' if packets else 'Bytes')
-    ax.set_xlabel('Time in secs')
+    # ax.set_xlabel('Time in secs')
+    ax.set_xlabel('# Windows')
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
+    ax.set_xlim(xmin=0)
+    ax.set_ylim(ymin=0)
     fig.savefig("{}outgoing_{}_protocols_{}.pdf".format(path, labeling, window_size))
     plt.close(fig=fig)
 
     # Plotting incoming
-    ax2.legend(handles=base_lines2, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
-    ax2.set_title("{} {} rate to {} in a window of {} secs".format(from_direction_to_string(packet_processing.PktDirection.incoming), labeling.replace('s', ''), mac_address, window_size))
+    # ax2.legend(handles=base_lines2, bbox_to_anchor=(1, 1), loc='upper left', fontsize='xx-small')
+    ax2.legend(handles=base_lines, loc='upper right', fontsize='x-small')
+    # ax2.set_title("{} {} rate to {} in a window of {} secs".format(from_direction_to_string(packet_processing.PktDirection.incoming), labeling.replace('s', ''), mac_address, window_size))
     ax2.set_ylabel('# Packets' if packets else 'Bytes')
-    ax2.set_xlabel('Time in secs')
+    # ax2.set_xlabel('Time in secs')
+    ax2.set_xlabel('# Windows')
     ax2.axhline(y=0, color='k')
     ax2.axvline(x=0, color='k')
+    ax2.set_xlim(xmin=0)
     fig2.savefig("{}incoming_{}_protocols_{}.pdf".format(path, labeling, window_size))
     plt.close(fig=fig2)
 
@@ -166,7 +200,7 @@ def processing_results_by_directory(folder, showText, total, packets_protocol, b
             continue
         processing_results_by_file(file_path, showText, total, packets_protocol, bytes_protocol)
 
-def processing_results_by_file(file_name, showText, total, packets_protocol, bytes_protocol):
+def processing_results_by_file(file_name, showText, total, packets_protocol, bytes_protocol, layer):
     
     print("Processing {} ...".format(file_name))
     if not file_name.endswith('.log'):
@@ -235,7 +269,7 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
                         if not key in TOTAL_BYTES.replace(' ', '_') and len(packets_lenght[key]) < len(packets_lenght[TOTAL_BYTES.replace(' ', '_')]):
                             packets_lenght[key].append(0)
                 continue
-
+                
             if OUTGOING in line or INCOMING in line or TOTAL in line or UNDEFINED_DIRECTION in line:
                 value = int(line.split(':')[1])
                 key = line.split(':')[0]
@@ -258,14 +292,23 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
             # print("{} {} {}".format(direction, protocol, packet_number))
             traffic_by_protocol[(protocol, direction, window_counter)] = packet_number
     
-    # Time values (x axis)
+    # Time values (x axis) (window*window_size)
     time_values = np.array(list(range(1, window_counter+2))) * window_size
+
+    # Window_values
+    window_values = np.array(list(range(1, window_counter+2)))
     
     # Fill empty values (this allow to have the same dimension)
     temp_dict = {}
-        
+    protocols = []
+    if not layer is None:
+        protocols = protocols_layer.get(layer)
+
     for (protocol, direction, _) in traffic_by_protocol.keys():
-        
+        # Filtering by protocols    
+        if protocols and not protocol in protocols:
+            continue
+
         if (protocol,direction) in  temp_dict.keys():
             continue
         
@@ -286,6 +329,8 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
     resulting_values[mac_address].append('avg_outgoing: {}'.format(round(np.mean(packets_traffic.get(OUTGOING)), 3)))
     ################################
 
+    
+
     if total:    
         #  Plotting incoming and outgoing bytes
         fig, ax = lists_plotting(time_values, packets_lenght.get(INCOMING_BYTES.replace(' ','_')), 
@@ -294,7 +339,7 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
                             showText=showText)
         
         if ax is None:
-            print('Somthing went wrong')
+            print('Something went wrong')
             sys.exit(-1)
         
         ax.set_ylabel('Bytes')
@@ -310,7 +355,7 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
                             showText=showText)
         
         if ax is None:
-            print('Somthing went wrong')
+            print('Something went wrong')
             sys.exit(-1)
         
         ax.set_ylabel('Bytes')
@@ -352,12 +397,13 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
         
         plt.savefig("{}undefined_total_packets_{}.pdf".format(path, window_size))
         plt.close(fig)
-        
+
+    # Plotting packets    
     if packets_protocol:
-        plot_by_protocol(data_dict=temp_dict, time_values=time_values, 
+        plot_by_protocol(data_dict=temp_dict, time_values=window_values, 
                         path=path, window_size=window_size, mac_address=mac_address, 
                         showText=showText)
-    
+    # Plotting bytes
     if bytes_protocol:
         plot_by_protocol(data_dict=temp_dict, time_values=time_values, 
                         path=path, window_size=window_size, mac_address=mac_address, 
@@ -366,6 +412,10 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
     # plt.show()
 
 def main(argv):
+    ####COMMAND TO BE LAUNCHED FOR GENERAL CASE####
+    # BYTES: python3 plot_generator.py -f processing_results_general/192.168.3.11_byte_60.log --bytes_protocol -c to_ignore/
+    # PACKETS: python3 plot_generator.py -f processing_results_general/192.168.3.11_packet_60.log --packets_protocol -c to_ignore/
+
     # Checking if the directory exists
     myre = re.compile(r'(?:[0-9a-fA-F]:?){6,12}')
 
@@ -375,10 +425,13 @@ def main(argv):
         device_path = args.category + "devices.txt"
         
         categories[0] = 'not-defined'
+        # Initializing categories
         with open(category_path, 'r') as file_categories:
             lines = file_categories.readlines()
             for line in lines:
                 categories[int(line.split()[1])] = line.split()[0]
+        
+        # Initializing devices
         with open(device_path, 'r') as file_devices:
             lines = file_devices.readlines()
             for line in lines:
@@ -391,7 +444,7 @@ def main(argv):
     
     if os.path.isfile(args.folder):
         print("File found!")
-        processing_results_by_file(args.folder, args.text, args.total, args.packets_protocol, args.bytes_protocol)
+        processing_results_by_file(args.folder, args.text, args.total, args.packets_protocol, args.bytes_protocol, layer=args.layer)
         sys.exit(0)
 
     if not os.path.isdir(args.folder):
@@ -418,7 +471,7 @@ if __name__ == '__main__':
     parser.add_argument("--folder", "-f", type=str, required=True, 
                         help="folder containing the data's directories")
 
-    parser.add_argument("--category", "-c", type=str, required=True,
+    parser.add_argument("--category", "-c", type=str, required=False,
                         help='generate folder divided by category (specify path that contains categories.txt and devices.txt)')
 
     parser.add_argument("--filter_by_window", "-w", type=str,
@@ -436,6 +489,9 @@ if __name__ == '__main__':
     parser.add_argument("--text", "-x", action='store_true',
                         help='show major details')
     
+    parser.add_argument("--layer", "-l", type=int, required=False,
+                        help="Plot only protocols of a specified layer (e.g. UDP/TCP layer 4)")
+
     parser.add_argument("--analysis", "-a", type=str,
                         help='give an output file, named with a specified string, containing useful data (very interesting for analysis purposes)')
 

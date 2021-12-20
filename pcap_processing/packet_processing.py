@@ -5,9 +5,8 @@ from collections import Counter
 from scapy.utils import RawPcapReader
 from scapy.layers.all import *
 
+
 # TODO Future upgrades: the links provided give csv file with this matching, so it could be cool to create these dictionaries starting from there
-
-
 class PktDirection(Enum):
     not_defined = 0
     outgoing = 1
