@@ -123,11 +123,11 @@ class GeneralPcapParser():
         other_counter = 0
 
         # output_file_name = path + str(self.file_counter) + random.choice(string.ascii_letters[0:24]) + ".log"
-        output_file_name_packet = "{}{}_packet.log".format(path, ip)
+        output_file_name_packet = "{}{}_packet_{}.log".format(path, ip, window)
         print("Output File name packet: {}".format(output_file_name_packet))
         log_file_packet = open(output_file_name_packet,'w')
         
-        output_file_name_byte = "{}{}_byte.log".format(path, ip)
+        output_file_name_byte = "{}{}_byte_{}.log".format(path, ip, window)
         print("Output File name byte: {}".format(output_file_name_byte))
         log_file_byte = open(output_file_name_byte,'w')
 
@@ -155,7 +155,7 @@ class GeneralPcapParser():
 
             for (pkt_data, pkt_metadata,) in RawPcapReader(file_name):
                 general_counter += 1
-                print(self.protocols_packet_counter_layer_3)
+                # print(self.protocols_packet_counter_layer_3)
                 
                 # If window is enabled we should get the timestamp and reset all counters
                 if not window is None:
