@@ -23,6 +23,7 @@ def main():
     total = len(files)
 
     df = pd.DataFrame()
+    # File Aggregation
     for i, file in enumerate(files):
         if  i == 0:
             continue
@@ -92,14 +93,27 @@ def main():
 
     collapsed_in_hours = pd.DataFrame()
     collapsed_in_hours = finalDataFrame.groupby(finalDataFrame["date"].dt.hour)["total_parked"].mean().reset_index(name="parkedAverage")
-    print(collapsed_in_hours)
+    enteringCars = enteringCars.groupby(enteringCars["date"].dt.hour)["carsEntered"].mean().reset_index(name="cars")
+    print(enteringCars)
+    # print(collapsed_in_hours)
 
     fig, ax = plt.subplots()
-    p1 = ax.bar(collapsed_in_hours['date'].array, collapsed_in_hours['parkedAverage'].array, width=0.35, label='Total', align='center', color='goldenrod')
 
-    ax.set_ylabel("Average Parked Cars")
+    # Parked cars
+    # p1 = ax.bar(collapsed_in_hours['date'].array, collapsed_in_hours['parkedAverage'].array, width=0.35, label='Total', align='center', color='goldenrod')
+
+    # ax.set_ylabel("Average Cars")
+    # ax.set_xlabel("Day Hours")
+    # ax.set_xticks(np.arange(24), lables=collapsed_in_hours["date"].array)
+    # ax.set_title("Average Parked Cars")
+
+    # Entering cars
+    p1 = ax.bar(enteringCars['date'].array, enteringCars['cars'].array, width=0.4, label='Entering', align='center', color='goldenrod')
+
+    ax.set_ylabel("Average Cars")
     ax.set_xlabel("Day Hours")
-    ax.set_xticks(np.arange(24), lables=collapsed_in_hours["date"].array)
+    ax.set_xticks(np.arange(24), lables=enteringCars["date"].array)
+    ax.set_title("Entering Cars Avrage")
 
     plt.show()
 
