@@ -121,7 +121,7 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Arnhem dataset analyser: This program plot the function that describes parked cars along time')
+    parser = argparse.ArgumentParser(description='Arnhem dataset analyser: This program plots the function that describes parked cars along time')
 
     parser.add_argument('-p', '--parking', metavar='<parking_lot_name>',
                         help='parking lot to filter out from the dataset (by default is Centraal)', type=str, default='Centraal')

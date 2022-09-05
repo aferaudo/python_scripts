@@ -4,3 +4,5 @@
 .vscode/
 
 pcap_processing/__pycache__/
+
+myvenv/

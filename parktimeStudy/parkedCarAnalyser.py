@@ -93,6 +93,10 @@ def main():
 
     collapsed_in_hours = pd.DataFrame()
     collapsed_in_hours = finalDataFrame.groupby(finalDataFrame["date"].dt.hour)["total_parked"].mean().reset_index(name="parkedAverage")
+
+    # Deleting weekends
+    enteringCars = enteringCars.loc[(enteringCars["date"].dt.day_name()=="Saturday") | (enteringCars["date"].dt.day_name()=="Sunday")]
+    
     enteringCars = enteringCars.groupby(enteringCars["date"].dt.hour)["carsEntered"].mean().reset_index(name="cars")
     print(enteringCars)
     # print(collapsed_in_hours)
@@ -113,7 +117,7 @@ def main():
     ax.set_ylabel("Average Cars")
     ax.set_xlabel("Day Hours")
     ax.set_xticks(np.arange(24), lables=enteringCars["date"].array)
-    ax.set_title("Entering Cars Avrage")
+    ax.set_title("Entering Cars Average")
 
     plt.show()
 
