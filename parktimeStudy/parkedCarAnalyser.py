@@ -25,8 +25,8 @@ def main():
     df = pd.DataFrame()
     # File Aggregation
     for i, file in enumerate(files):
-        if  i == 0:
-            continue
+        # if  i == 0:
+        #     continue
         df = pd.concat([df, pd.read_csv('{}/{}'.format(dir_name, file), sep=';', parse_dates=['start_parking_dt', 'pay_parking_dt', 'end_parking_dt'])])
         df = df.loc[df["garage_nm"] == "Centraal"]
         print("analysing {} {} of {}".format(file, (i+1), total))
@@ -73,7 +73,8 @@ def main():
 
     
     finalDataFrame["total_parked"] = finalDataFrame.apply(lambda row : compute_total_parked_cars(row), axis=1)
-    # finalDataFrame.to_csv("join.csv", sep=";")
+    print(finalDataFrame)
+    finalDataFrame.to_csv("join.csv", sep=";")
     
     # We should delete some rows because the first ones don't represent the real scenario: counter is set to zero initially
     finalDataFrame.drop(index=df.index[:100], axis=0, inplace=True)
@@ -99,12 +100,13 @@ def main():
     
     enteringCars = enteringCars.groupby(enteringCars["date"].dt.hour)["carsEntered"].mean().reset_index(name="cars")
     print(enteringCars)
+    enteringCars.to_csv("entering_cars_average.csv", sep=";")
     # print(collapsed_in_hours)
 
     fig, ax = plt.subplots()
 
     # Parked cars
-    # p1 = ax.bar(collapsed_in_hours['date'].array, collapsed_in_hours['parkedAverage'].array, width=0.35, label='Total', align='center', color='goldenrod')
+    p1 = ax.bar(collapsed_in_hours['date'].array-0.2, collapsed_in_hours['parkedAverage'].array, width=0.4, label='Total', align='center', color='goldenrod')
 
     # ax.set_ylabel("Average Cars")
     # ax.set_xlabel("Day Hours")
@@ -112,13 +114,14 @@ def main():
     # ax.set_title("Average Parked Cars")
 
     # Entering cars
-    p1 = ax.bar(enteringCars['date'].array, enteringCars['cars'].array, width=0.4, label='Entering', align='center', color='goldenrod')
+    p2 = ax.bar(enteringCars['date'].array+0.2, enteringCars['cars'].array, width=0.4, label='Cars entering', align='center')
 
     ax.set_ylabel("Average Cars")
     ax.set_xlabel("Day Hours")
     ax.set_xticks(np.arange(24), lables=enteringCars["date"].array)
     ax.set_title("Entering Cars Average")
 
+    ax.legend()
     plt.show()
 
 
