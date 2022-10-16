@@ -246,7 +246,7 @@ def processing_results_by_directory(folder, showText, total, packets_protocol, b
 
     for filename in files:
         file_path = folder + filename
-        if filter_by_window != None and not filter_by_window in filename.replace(".log","").split("_"):
+        if filter_by_window != None and filter_by_window not in filename.replace(".log","").split("_"):
             continue
         
         data_dict, window_values, path, window_size, label = processing_results_by_file(file_path, showText, total, packets_protocol, bytes_protocol,layer=layer, min_win=min_win, iptables=iptables)
@@ -364,7 +364,7 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
                     # Filling gaps
                     if TOTAL_BYTES in line:
                         for key in packets_lenght.keys():
-                            if not key in TOTAL_BYTES.replace(' ', '_') and len(packets_lenght[key]) < len(packets_lenght[TOTAL_BYTES.replace(' ', '_')]):
+                            if key not in TOTAL_BYTES.replace(' ', '_') and len(packets_lenght[key]) < len(packets_lenght[TOTAL_BYTES.replace(' ', '_')]):
                                 packets_lenght[key].append(0)
                     continue
                     
@@ -375,7 +375,7 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
 
                     if TOTAL in line:
                         for key in packets_traffic.keys():
-                            if not key in TOTAL and len(packets_traffic[key]) < len(packets_traffic[TOTAL]):
+                            if key not in TOTAL and len(packets_traffic[key]) < len(packets_traffic[TOTAL]):
                                 packets_traffic[key].append(0)
                     continue
                     
@@ -401,26 +401,27 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
     # Fill empty values (this allow to have the same dimension)
     temp_dict = {}
     protocols = []
-    if not layer is None:
+    if layer is not None:
         protocols = protocols_layer.get(layer)
 
     for (protocol, direction, _) in traffic_by_protocol.keys():
         # Filtering by protocols    
-        if protocols and not protocol in protocols:
+        if protocols and protocol not in protocols:
             continue
 
-        if (protocol,direction) in  temp_dict.keys():
+        if (protocol,direction) in temp_dict.keys():
             continue
         
         temp_dict[(protocol,direction)] = []
-        
         for counter in range(0, real_window_counter + 1):
             if (protocol, direction, counter) in traffic_by_protocol.keys():
                 value = traffic_by_protocol.get((protocol, direction, counter))
-            else:
-                value = 0 # For that window no packets have been sent
+            # else:
+            #     value = 0 # For that window no packets have been sent
             
             temp_dict[(protocol,direction)].append(value)
+    # print("################ PRINTING TEMP DICT ###################")
+    # print(temp_dict)
     # Analysis values
     if not iptables:
         resulting_values[mac_address].append('Type: {}'.format(categories.get(devices_cat_match.get(mac_address))))
@@ -551,20 +552,17 @@ def main(argv):
     if os.path.isfile(args.folder):
         print("File found!")
         processing_results_by_file(args.folder, args.text, args.total, args.packets_protocol, args.bytes_protocol, layer=args.layer, min_win=args.min)
-        sys.exit(0)
-
-    if not os.path.isdir(args.folder):
+        #sys.exit(0)
+    elif not os.path.isdir(args.folder):
         print('"{}" does not exist'.format(args.folder), file=sys.stderr)
         sys.exit(-1)
-
-    
-
-    for directory in os.listdir(args.folder):
-        if not re.findall(myre, directory) and not args.iptables:
-            continue
-        path = "{}/{}/".format(args.folder, directory)
-        if os.path.isdir(path):
-            processing_results_by_directory(path, args.text, args.total, args.packets_protocol, args.bytes_protocol, args.filter_by_window, layer=args.layer, min_win=args.min, iptables=args.iptables)
+    else:
+        for directory in os.listdir(args.folder):
+            if not re.findall(myre, directory) and not args.iptables:
+                continue
+            path = "{}/{}/".format(args.folder, directory)
+            if os.path.isdir(path):
+                processing_results_by_directory(path, args.text, args.total, args.packets_protocol, args.bytes_protocol, args.filter_by_window, layer=args.layer, min_win=args.min, iptables=args.iptables)
 
     if args.analysis:
         print("here")
