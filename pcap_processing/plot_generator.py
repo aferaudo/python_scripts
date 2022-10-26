@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 import re
 import packet_processing
+import matplotlib.ticker as ticker
 
 # I use this script to take some piecies of code (not usable anymore)
 
@@ -19,13 +20,15 @@ protocols_filter = {
 
 protocols_iptables_filter_color = {
     'TCP iptables': 'blue',
-    'TCP noiptables': 'red'
+    'TCP noiptables': 'red',
+    'TCP ebpf': 'green'
     # ...
 }
 
 protocols_ip_tables_markers = {
     'TCP iptables': 'o',
-    'TCP noiptables': 's'
+    'TCP noiptables': 's',
+    'TCP ebpf': 'x'
     # ...
 }
 
@@ -205,10 +208,14 @@ def plot_by_protocol(data_dict, time_values, showText, path, window_size, mac_ad
     fig2.savefig("{}incoming_{}_protocols_{}.pdf".format(path, labeling, window_size))
     plt.close(fig=fig2)
 
+# IPTABLES PLOTTER
 def comparison_iptables_plotter(list_data, list_window_values, list_window_size, list_labels, path, bytes_plot=False):
     # Plotting packets/bytes grouped by protocol
-    fig, ax = plt.subplots(figsize = (10, 5))
-    ax.grid(linestyle="dashed", color='lightgrey') 
+    plt.rcParams.update({'font.size': 14, 'font.family': 'Times New Roman'})
+    fig, ax = plt.subplots(figsize = (7, 5))
+    print("here")
+    # ax.tick_params(axis='both', which='major', labelsize=14)
+    ax.grid(color='lightgrey') 
     labeling = "bytes" if bytes_plot else "packets"
     base_lines = []
     for index, data_dict in enumerate(list_data):
@@ -226,11 +233,18 @@ def comparison_iptables_plotter(list_data, list_window_values, list_window_size,
     ax.set_ylabel('Bytes' if bytes_plot else '# Packets')
     # ax.set_xlabel('Time in secs')
     ax.set_xlabel('# Windows')
+    
+    # y_labels = ax.get_yticks()
+    # ax.yaxis.set_major_formatter(ticker.FormatStrFormatter(lambda y, _: '{:g}'.format(y)))
+
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
     ax.set_xlim(xmin=0)
+    ax.legend(loc="upper left")
     ax.set_ylim(ymin=0)
-    print(path)
+    # Scientific notation
+    ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
+    print("Saving {}/outgoing_{}_protocols_{}.pdf".format(path, labeling, list_window_size[0]))
     fig.savefig("{}/outgoing_{}_protocols_{}.pdf".format(path, labeling, list_window_size[0]))
     plt.close(fig=fig)
 

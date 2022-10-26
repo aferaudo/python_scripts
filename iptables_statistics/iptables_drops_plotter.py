@@ -97,8 +97,8 @@ def main(argv):
     
 
     plt.rcParams.update({'font.size': 14, 'font.family': 'Times New Roman'})
-    fig, ax = plt.subplots(figsize = (6, 3))
-    fig2, ax2 = plt.subplots(figsize = (6, 3))
+    fig, ax = plt.subplots(figsize = (6, 3)) # Averages
+    fig2, ax2 = plt.subplots(figsize = (6, 3)) # Peaks
     x = np.arange(2)
     width=0.3
     
@@ -125,7 +125,9 @@ def main(argv):
     ax.bar_label(rects1, padding=3)
     ax.bar_label(rects2, padding=3)
     ax2.bar_label(rects3, padding=3)
-    ax2.bar_label(rects4, padding=3)  
+    ax2.bar_label(rects4, padding=3)
+    fig.savefig("iptables_statistics_average.pdf")
+    fig2.savefig("iptables_statistics_peaks.pdf")    
     plt.show()
 
     
