@@ -1,0 +1,29 @@
+Chain INPUT (policy ACCEPT 182K packets, 9899K bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 3664  468K CUSTOM_CHAIN  all  --  *      *       192.168.3.11         0.0.0.0/0           
+    2    80 ACCEPT     tcp  --  *      *       192.168.4.4          192.168.3.11        
+   20   800 ACCEPT     tcp  --  *      *       192.168.4.3          192.168.3.11        
+    4   160 ACCEPT     tcp  --  *      *       192.168.4.5          192.168.3.11        
+    0     0 ACCEPT     tcp  --  *      *       192.168.4.6          192.168.3.11        
+    0     0 ACCEPT     tcp  --  *      *       192.168.4.7          192.168.3.11        
+    0     0 ACCEPT     tcp  --  *      *       192.168.4.8          192.168.3.11        
+    0     0 ACCEPT     tcp  --  *      *       192.168.4.9          192.168.3.11        
+ 3228  129K ACCEPT     tcp  --  *      *       192.168.4.2          192.168.3.11        
+
+Chain OUTPUT (policy ACCEPT 183K packets, 20M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain CUSTOM_CHAIN (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    3   156 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.4          
+   21  4353 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.3          
+    6   312 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.5          
+    0     0 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.6          
+    0     0 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.7          
+    0     0 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.8          
+    0     0 ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.9          
+ 3229  413K ACCEPT     tcp  --  *      *       192.168.3.11         192.168.4.2         
+  405 50563 DROP       all  --  *      *       192.168.3.11         0.0.0.0/0           
