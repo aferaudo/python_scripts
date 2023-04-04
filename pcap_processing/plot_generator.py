@@ -327,6 +327,8 @@ def processing_results_by_file(file_name, showText, total, packets_protocol, byt
     packets_traffic = {}
     packets_lenght = {}
     traffic_by_protocol = {}
+    # # This is used to compute analysis data (average packets/bytes for each TCP and UDP) when there is an actual flow of data exchange between two pairs
+    # traffic_by_protocol_in_flow = {}
     
     initialise_dict(packets_traffic)
     initialise_dict(packets_lenght, True)

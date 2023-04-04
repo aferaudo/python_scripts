@@ -3,8 +3,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-
+import scipy.stats as stats
 from scipy.optimize import curve_fit
 
 
@@ -13,6 +12,7 @@ def occupancy_percentage(row):
     return round(percentage, 2)
 
 def difference_dates(row):
+    # returns the values in minute
     return round((row['end_parking_dt'] - row['start_parking_dt']).total_seconds() / 60)
 
 def Gauss(x, A, B):
@@ -40,8 +40,8 @@ def main(argv):
     print("Aggregation started...")
     
     for i, file in enumerate(files):
-        if  i == 0:
-            continue
+        # if  i == 0:
+        #     continue
         df = pd.DataFrame()
         df = pd.read_csv('{}/{}'.format(dir_name, file), sep=';', parse_dates=['start_parking_dt', 'pay_parking_dt', 'end_parking_dt'])
         # Data aggregation
@@ -52,9 +52,10 @@ def main(argv):
 
         # Computing occupancytime and putting it in a new column
         df['occupancyTime'] = df.apply(lambda row : difference_dates(row), axis = 1)
+        print(df)
         df = df.groupby(['occupancyTime', 'garage_nm']).size().reset_index()
 
-
+        
         df.columns = ['occupancyTime', 'garage_nm', 'count']
         # we do not consider car parked for > 10 hours and < 1 minute. Additionallyk, parking times where cars are less than 10
         df = df.loc[(df['count'] > 10) & (df['occupancyTime'] <= 600) & (df['occupancyTime'] >= 1)] 
@@ -65,9 +66,11 @@ def main(argv):
     print("End aggregation")
     
     main_df = main_df.sort_values(by=['occupancyTime'])
-
+    
     main_df = main_df.groupby(['occupancyTime']).mean().reset_index()
 
+    print(main_df)
+    
     sum = pd.Series(main_df['count']).sum()
     
  
@@ -94,7 +97,7 @@ def main(argv):
         sum_total = sum_total + (row['occupancyTime'] * row['count'])
         sum_weights = sum_weights + row['count']
 
-    weighted_mean = sum_total/sum_weights
+    weighted_mean = sum_total/sum_weights # because the mean should be oriented towards times where there are more parked cars
 
     num_sum = 0
 
@@ -103,12 +106,16 @@ def main(argv):
     
     weighted_std = np.sqrt(num_sum/(((M-1)/M) * sum_weights))
     print("Media pesata: {}, std pesata: {} ".format(weighted_mean, weighted_std))
+    print("Media normale: {}, std normale: {} ".format(np.mean(occupancies), np.std(occupancies)))
     # fit_y = Gauss(occupancies, fit_A, fit_B)
     # fit_y = quadraticFunction(occupancies, fit_A, fit_B, fit_C)
     fit_y = objective(occupancies, fit_A, fit_B, fit_C, fit_D, fit_E, fit_F, fit_G)
 
-    plt.plot(occupancies, cars,'o', label='normal')
+    # pdf = stats.norm.pdf(occupancies, np.mean(occupancies), np.std(occupancies))
+    pdf = stats.norm.pdf(occupancies, weighted_mean, weighted_std)
+    plt.plot(occupancies, cars,'o', label='normalised data')
     plt.plot(occupancies, fit_y, '-', label='fit')
+    plt.plot(occupancies, pdf,'-', label='normal', color="red", linewidth=2)
 
     plt.xlabel('occupancy time (minutes)')
     plt.ylabel('density')

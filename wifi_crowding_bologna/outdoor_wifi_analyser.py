@@ -44,10 +44,10 @@ def main(argv):
     # basic_url = "https://opendata.comune.bologna.it/api/v2/catalog/datasets/iperbole-wifi-affollamento/records?select=geo_shape%2C%20nome_zona%2C%20data%2C%20ora%2C%20{}&&timezone=Europe%2FBerlin&where=".format(field_to_monitor)
     basic_url = "https://opendata.comune.bologna.it/api/v2/catalog/datasets/iperbole-wifi-affluenza/records?select=geo_shape%2C%20nome_zona%2C%20data%2C%20ora%2C%20{}&&timezone=Europe%2FBerlin&where=".format(field_to_monitor)
     
-    datetime_str = '2022-07-01 00:00:00'
+    datetime_str = '2023-01-01 00:00:00'
     datetime_s_object = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     
-    datetime_str = '2022-08-01 00:00:00'
+    datetime_str = '2023-04-01 00:00:00'
     datetime_e_object = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     
     while datetime_s_object < datetime_e_object:
@@ -87,7 +87,7 @@ def main(argv):
 
     df = df.groupby(df["ora"]).mean().reset_index()
 
-    df.to_csv("data_iperbole_entering.csv", sep=";")
+    df.to_csv("data_iperbole_entering_new.csv", sep=";")
 
     fig, ax = plt.subplots()
 

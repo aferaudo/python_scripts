@@ -21,17 +21,20 @@ def main():
     dir_name = 'dataset'
     files = sorted(os.listdir(dir_name))
     total = len(files)
+    park_capacity = 1000 # to change
 
     df = pd.DataFrame()
     # File Aggregation
     for i, file in enumerate(files):
-        # if  i == 0:
-        #     continue
+        if  i != 4:
+            continue
         df = pd.concat([df, pd.read_csv('{}/{}'.format(dir_name, file), sep=';', parse_dates=['start_parking_dt', 'pay_parking_dt', 'end_parking_dt'])])
         df = df.loc[df["garage_nm"] == "Centraal"]
         print("analysing {} {} of {}".format(file, (i+1), total))
 
     
+    print(df)
+
     # new Dataframes
     enteringCars = pd.DataFrame()
     outgoingCars = pd.DataFrame()
@@ -67,13 +70,15 @@ def main():
 
     # print(enteringCars)
     # print(outgoingCars)
+    # enteringCars.to_csv("enteringCars.csv", sep=";")
+    # outgoingCars.to_csv("outgoingCars.csv", sep=";")
 
     finalDataFrame = pd.merge(enteringCars, outgoingCars, on="date", how="outer", sort=True)
     finalDataFrame[["carsEntered", "carsLeaving"]] = finalDataFrame.select_dtypes('float64').fillna(0)
 
     
     finalDataFrame["total_parked"] = finalDataFrame.apply(lambda row : compute_total_parked_cars(row), axis=1)
-    print(finalDataFrame)
+    # print(finalDataFrame)
     finalDataFrame.to_csv("join.csv", sep=";")
     
     # We should delete some rows because the first ones don't represent the real scenario: counter is set to zero initially
@@ -95,18 +100,27 @@ def main():
     collapsed_in_hours = pd.DataFrame()
     collapsed_in_hours = finalDataFrame.groupby(finalDataFrame["date"].dt.hour)["total_parked"].mean().reset_index(name="parkedAverage")
 
+    # Deleting work days
+    #enteringCars = enteringCars.loc[(enteringCars["date"].dt.day_name()=="Saturday") | (enteringCars["date"].dt.day_name()=="Sunday")]
     # Deleting weekends
-    enteringCars = enteringCars.loc[(enteringCars["date"].dt.day_name()=="Saturday") | (enteringCars["date"].dt.day_name()=="Sunday")]
+    #enteringCars = enteringCars.loc[(enteringCars["date"].dt.day_name()!="Saturday") | (enteringCars["date"].dt.day_name()!="Sunday")]
     
     enteringCars = enteringCars.groupby(enteringCars["date"].dt.hour)["carsEntered"].mean().reset_index(name="cars")
+    
+    enteringCars["percentage"] = (enteringCars["cars"]/park_capacity) 
+
+    collapsed_in_hours["percentage"] = (collapsed_in_hours["parkedAverage"]/park_capacity) 
+    
+    #print(collapsed_in_hours)
     print(enteringCars)
-    enteringCars.to_csv("entering_cars_average.csv", sep=";")
+    
+    #enteringCars.to_csv("entering_cars_average.csv", sep=";")
     # print(collapsed_in_hours)
 
     fig, ax = plt.subplots()
 
     # Parked cars
-    p1 = ax.bar(collapsed_in_hours['date'].array-0.2, collapsed_in_hours['parkedAverage'].array, width=0.4, label='Total', align='center', color='goldenrod')
+    # p1 = ax.bar(collapsed_in_hours['date'].array-0.2, collapsed_in_hours['parkedAverage'].array, width=0.4, label='Total', align='center', color='goldenrod')
 
     # ax.set_ylabel("Average Cars")
     # ax.set_xlabel("Day Hours")
@@ -120,6 +134,8 @@ def main():
     ax.set_xlabel("Day Hours")
     ax.set_xticks(np.arange(24), lables=enteringCars["date"].array)
     ax.set_title("Entering Cars Average")
+
+
 
     ax.legend()
     plt.show()

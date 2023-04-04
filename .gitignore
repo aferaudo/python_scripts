@@ -6,3 +6,11 @@
 pcap_processing/__pycache__/
 
 myvenv/
+
+parktimeStudy/dataset/
+
+parktimeStudy/__pycache__/
+
+wifi_crowding_bologna/data_to_plot/
+
+parktimeStudy/test.csv
