@@ -11,16 +11,13 @@ def main():
     df[['lat', 'longi']] = df['geopoint'].str.split(', ', expand=True)
     df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
     df['longi'] = pd.to_numeric(df['longi'], errors='coerce')
-    print(df.dtypes)
-    print(df.iloc[0])    
-    print(df.head())
-    # df1 = px.data.gapminder().query("year == 2007")
-    # print(df1.head())
-    fig = px.scatter_mapbox(df,
-                    lat=df.lat,
-                    lon=df.longi,
-                    hover_name="ID_univoco_stazione_spira")
-    fig.show()
+
+    print(df)
+    # fig = px.scatter_mapbox(df,
+    #                 lat=df.lat,
+    #                 lon=df.longi,
+    #                 hover_name="ID_univoco_stazione_spira")
+    # fig.show()
 
 if __name__ == '__main__':
     main()

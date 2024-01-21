@@ -16,3 +16,7 @@ wifi_crowding_bologna/data_to_plot/
 parktimeStudy/test.csv
 
 inductionLoopsVisualizer/config
+
+sumoCoordinateGenerator/geojsonCoordinates/*
+sumoCoordinateGenerator/sumoNetwork/*
+sumoCoordinateGenerator/*.xml
